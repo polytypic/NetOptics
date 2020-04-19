@@ -27,9 +27,9 @@ module Optic =
   val lens: ('s -> 'a) -> ('a -> 's -> 's) -> Optic<'s, 'a>
 
   val iso: ('s -> 't) -> ('t -> 's) -> Optic<'s, 't>
-  val review: Optic<'s, 't> -> 't -> 's // undefined unless isomorphism
+  val review: Optic<'s, 't> -> 't -> 's // raises unless isomorphism
 
-  val invertI: Optic<'s, 't> -> Optic<'t, 's> // undefined unless isomorphism
+  val invertI: Optic<'s, 't> -> Optic<'t, 's> // requires an isomorphism
 
   val whereP: ('a -> bool) -> Optic<'a, 'a>
 
