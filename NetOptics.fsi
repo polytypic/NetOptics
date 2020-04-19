@@ -1,5 +1,7 @@
 namespace NetOptics
 
+open System.Collections.Generic
+
 /// The internal implementation details of optics are hidden.
 type Pipe<'a>
 
@@ -79,6 +81,15 @@ module Optic =
 
   /// A lens focusing on the second element of a pair.
   val sndL: Optic<'x * 'y, 'y>
+
+module Collections =
+  /// Defines a traversal for an enumerable type.
+  val elemsOf: (IReadOnlyList<'x> -> 'xs)
+            -> Optic<'xs, 'x> when 'xs :> IEnumerable<'x>
+
+  /// Defines a prism for a list type.
+  val atOf: (IReadOnlyList<'x> -> 'xs)
+         -> int -> Optic<'xs, 'x> when 'xs :> IReadOnlyList<'x>
 
 module Array =
   /// A prism focusing on element at given index in an array.

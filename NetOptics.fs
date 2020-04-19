@@ -1,5 +1,8 @@
 namespace NetOptics
 
+open System.Collections.Generic
+open System.Linq
+
 type [<Struct>] Context =
   val mutable Over: bool
   val mutable Hit: bool
@@ -117,55 +120,42 @@ module Optic =
   let fstL<'x, 'y> p = lens fst (fun x (_: 'x, y: 'y) -> (x, y)) p
   let sndL<'x, 'y> p = lens snd (fun y (x: 'x, _: 'y) -> (x, y)) p
 
-module Array =
-  let elemsT (P (p, _)) = O<|D(fun c (xs: array<'a>) ->
-    let n = xs.Length
+module Collections =
+  let elemsOf (ctor: IReadOnlyList<'x> -> 'xs when 'xs :> IEnumerable<'x>)
+              (P (p, _): Pipe<'x>) = O<|D(fun c (xs: 'xs) ->
     if c.Over then
-      let ys = Array.zeroCreate n
-      let mutable i = 0
-      let mutable j = 0
-      while i < n do
-        let y = p.Invoke (&c, xs.[i])
-        if c.Hit then
-          c.Hit <- false
-          i <- i + 1
-        else
-          ys.[j] <- y
-          i <- i + 1
-          j <- j + 1
-      if i <> j then Array.sub ys 0 j else ys
+      let ys = ResizeArray<_>()
+      use e = (xs :> IEnumerable<_>).GetEnumerator ()
+      while (e :> IEnumerator<_>).MoveNext () do
+        let y = p.Invoke (&c, (e :> IEnumerator<_>).Current)
+        if c.Hit then c.Hit <- false else ys.Add y
+      ctor ys
     else
-      let mutable i = 0
-      while not c.Hit && i < n do
-        p.Invoke (&c, xs.[i]) |> ignore
-        i <- i + 1
+      use e = (xs :> IEnumerable<_>).GetEnumerator ()
+      while not c.Hit && (e :> IEnumerator<_>).MoveNext () do
+        p.Invoke (&c, (e :> IEnumerator<_>).Current) |> ignore
       nil<_>)
 
-  let atP ix (P (p, _)) = O<|D(fun c (xs: array<'a>) ->
-    let n = xs.Length
+  let atOf (ctor: IReadOnlyList<'x> -> 'xs :> IReadOnlyList<'x>) ix
+           (P (p, _): Pipe<'x>) = O<|D(fun c (xs: 'xs) ->
+    let n = (xs :> IReadOnlyList<'x>).Count
     if c.Over then
-      let ys = Array.zeroCreate n
+      let ys = ResizeArray<_>(n)
       let mutable i = 0
-      let mutable j = 0
       while i < n do
         let x = xs.[i]
         let y = if i = ix then p.Invoke (&c, x) else x
-        if c.Hit then
-          c.Hit <- false
-          i <- i + 1
-        else
-          ys.[j] <- y
-          i <- i + 1
-          j <- j + 1
-      if i <> j then
-        c.Hit <- false
-        Array.sub ys 0 j
-      else
-        ys
+        if c.Hit then c.Hit <- false else ys.Add y
+        i <- i + 1
+      ctor ys
     else
       if 0 <= ix && ix < n then p.Invoke (&c, xs.[ix]) |> ignore
       nil<_>)
 
+module Array =
+  let ofList (xs: IReadOnlyList<'x>) = xs.ToArray ()
+  let elemsT p = Collections.elemsOf ofList p
+  let atP ix = Collections.atOf ofList ix
   let revI p = iso Array.rev Array.rev p
 
 module String =
