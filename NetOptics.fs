@@ -105,6 +105,11 @@ module Optic =
   let chooseL (toOptic: 's -> Optic<'s, 'a>) p =
     O<|D(fun c s -> let (P (p, _)) = toOptic s p in p.Invoke (&c, s))
 
+  let ifElseL pred onT onF (p: Pipe<_>) =
+    let (P (pT, _)) = onT p
+    let (P (pF, _)) = onF p
+    O<|D(fun c s -> if pred s then pT.Invoke (&c, s) else pF.Invoke (&c, s))
+
   let zeroP (_: Pipe<'s>) = O<|D(fun _ (s: 's) -> s)
 
   let idI p = iso id id p

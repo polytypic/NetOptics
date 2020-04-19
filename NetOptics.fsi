@@ -65,6 +65,9 @@ module Optic =
   /// A non-isomorphism computed from the focus.
   val chooseL: ('s -> Optic<'s, 'a>) -> Optic<'s, 'a>
 
+  /// A choice between two non-isomorphisms depending on the focus.
+  val ifElseL: ('s -> bool) -> Optic<'s, 'a> -> Optic<'s, 'a> -> Optic<'s, 'a>
+
   /// A prism that never has a focus.
   val zeroP: Optic<'s, 's>
 
