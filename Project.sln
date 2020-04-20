@@ -1,0 +1,65 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30011.22
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "NetOptics", "NetOptics.fsproj", "{4A7537CF-9721-4D7D-9839-CD1DF13BC39F}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "NetAtom", "NetAtom.fsproj", "{5DC234B1-9A0C-45BF-BF4C-9586715CC1E4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D0F96BD4-2C76-46A0-AFE8-440BF5142DE3}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		.prettierrc = .prettierrc
+		LICENSE.md = LICENSE.md
+		packages.config = packages.config
+		README.md = README.md
+		TODO.md = TODO.md
+	EndProjectSection
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "App.Todo", "App.Todo.fsproj", "{2BDACBD3-9392-4094-A0E5-33E1F68D5CFF}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DeclarativeWPF", "DeclarativeWPF.fsproj", "{8295066E-F619-4E72-B4BD-27B60A2B68B4}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "NetOptics.Test", "NetOptics.Test.fsproj", "{BB6F952E-F8FC-4432-BC06-548E7DA4DD26}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "App.Contacts", "App.Contacts.fsproj", "{AD41D484-21F0-497E-A026-589D2A6B4F79}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4A7537CF-9721-4D7D-9839-CD1DF13BC39F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A7537CF-9721-4D7D-9839-CD1DF13BC39F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A7537CF-9721-4D7D-9839-CD1DF13BC39F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A7537CF-9721-4D7D-9839-CD1DF13BC39F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5DC234B1-9A0C-45BF-BF4C-9586715CC1E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DC234B1-9A0C-45BF-BF4C-9586715CC1E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DC234B1-9A0C-45BF-BF4C-9586715CC1E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DC234B1-9A0C-45BF-BF4C-9586715CC1E4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BDACBD3-9392-4094-A0E5-33E1F68D5CFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BDACBD3-9392-4094-A0E5-33E1F68D5CFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BDACBD3-9392-4094-A0E5-33E1F68D5CFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BDACBD3-9392-4094-A0E5-33E1F68D5CFF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8295066E-F619-4E72-B4BD-27B60A2B68B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8295066E-F619-4E72-B4BD-27B60A2B68B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8295066E-F619-4E72-B4BD-27B60A2B68B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8295066E-F619-4E72-B4BD-27B60A2B68B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB6F952E-F8FC-4432-BC06-548E7DA4DD26}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB6F952E-F8FC-4432-BC06-548E7DA4DD26}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB6F952E-F8FC-4432-BC06-548E7DA4DD26}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB6F952E-F8FC-4432-BC06-548E7DA4DD26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD41D484-21F0-497E-A026-589D2A6B4F79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD41D484-21F0-497E-A026-589D2A6B4F79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD41D484-21F0-497E-A026-589D2A6B4F79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD41D484-21F0-497E-A026-589D2A6B4F79}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1D67267B-8893-47EF-B60A-0A46777AE5D7}
+	EndGlobalSection
+EndGlobal

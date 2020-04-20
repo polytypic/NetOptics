@@ -1,2 +1,7 @@
+*~
 *.dll
 *.exe
+.vs
+bin
+obj
+packages
