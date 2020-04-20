@@ -88,11 +88,11 @@ module Optic =
   let collect (o: Optic<'s, 'a>) s =
     let xs = ResizeArray<_>()
     iter o xs.Add s
-    xs.ToArray ()
-  let disperse (o: Optic<'s, 'a>) (xs: array<_>) s =
+    xs :> IReadOnlyList<_>
+  let disperse (o: Optic<'s, 'a>) (xs: IReadOnlyList<'a>) s =
     let mutable i = 0
     over o
-     <| fun x -> if i < xs.Length then let x = xs.[i] in i <- i + 1; x else x
+     <| fun x -> if i < xs.Count then let x = xs.[i] in i <- i + 1; x else x
      <| s
   let partsOf o = lens (collect o) (disperse o)
 
@@ -120,25 +120,22 @@ module Optic =
   let fstL<'x, 'y> p = lens fst (fun x (_: 'x, y: 'y) -> (x, y)) p
   let sndL<'x, 'y> p = lens snd (fun y (x: 'x, _: 'y) -> (x, y)) p
 
-module Collections =
-  let elemsOf (ctor: IReadOnlyList<'x> -> 'xs when 'xs :> IEnumerable<'x>)
-              (P (p, _): Pipe<'x>) = O<|D(fun c (xs: 'xs) ->
+  let elemsT (P (p, _)) = O<|D(fun c (xs: IReadOnlyList<_>) ->
     if c.Over then
-      let ys = ResizeArray<_>()
+      let ys = ResizeArray<_>(xs.Count)
       use e = (xs :> IEnumerable<_>).GetEnumerator ()
       while (e :> IEnumerator<_>).MoveNext () do
         let y = p.Invoke (&c, (e :> IEnumerator<_>).Current)
         if c.Hit then c.Hit <- false else ys.Add y
-      ctor ys
+      ys :> IReadOnlyList<_>
     else
       use e = (xs :> IEnumerable<_>).GetEnumerator ()
       while not c.Hit && (e :> IEnumerator<_>).MoveNext () do
         p.Invoke (&c, (e :> IEnumerator<_>).Current) |> ignore
       nil<_>)
 
-  let atOf (ctor: IReadOnlyList<'x> -> 'xs :> IReadOnlyList<'x>) ix
-           (P (p, _): Pipe<'x>) = O<|D(fun c (xs: 'xs) ->
-    let n = (xs :> IReadOnlyList<'x>).Count
+  let atP ix (P (p, _)) = O<|D(fun c (xs: IReadOnlyList<_>) ->
+    let n = xs.Count
     if c.Over then
       let ys = ResizeArray<_>(n)
       let mutable i = 0
@@ -147,18 +144,22 @@ module Collections =
         let y = if i = ix then p.Invoke (&c, x) else x
         if c.Hit then c.Hit <- false else ys.Add y
         i <- i + 1
-      ctor ys
+      ys :> IReadOnlyList<_>
     else
       if 0 <= ix && ix < n then p.Invoke (&c, xs.[ix]) |> ignore
       nil<_>)
 
-module Array =
-  let ofList (xs: IReadOnlyList<'x>) = xs.ToArray ()
-  let elemsT p = Collections.elemsOf ofList p
-  let atP ix = Collections.atOf ofList ix
-  let revI p = iso Array.rev Array.rev p
+  let inline private asArray (xs: IReadOnlyList<'x>) =
+    match xs with
+    | :? array<'x> as xs -> xs
+    | _ -> xs.ToArray ()
 
-module String =
+  let inline private rev (xs: IReadOnlyList<'x>) =
+    Array.rev (asArray xs) :> IReadOnlyList<'x>
+
+  let revI p = iso rev rev p
+
   let splitI (sep: char) =
     let seps = [|sep|]
-    iso (fun (s: string) -> s.Split seps) (String.concat <| string sep)
+    iso (fun (s: string) -> s.Split seps :> IReadOnlyList<_>)
+        (String.concat <| string sep)

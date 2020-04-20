@@ -6,7 +6,7 @@ open System.Collections.Generic
 type Pipe<'a>
 
 /// Optics are functions composable with the standard `<<` operator.
-type Optic<'s,'a> = Pipe<'a> -> Pipe<'s>
+type Optic<'s, 'a> = Pipe<'a> -> Pipe<'s>
 
 [<AutoOpen>]
 module Optic =
@@ -41,13 +41,13 @@ module Optic =
   val tryRemove: Optic<'s, 'a> -> ('s -> option<'s>)
 
   /// Extracts an array of all the focuses of the optic on the data.
-  val collect: Optic<'s, 'a> -> 's -> 'a[]
+  val collect: Optic<'s, 'a> -> 's -> IReadOnlyList<'a>
 
   /// Injects elements from the array to the focuses of the optic on the data.
-  val disperse: Optic<'s, 'a> -> 'a[] -> 's -> 's
+  val disperse: Optic<'s, 'x> -> IReadOnlyList<'x> -> 's -> 's
 
   /// Converts an optic to a lens focusing on an array of the focuses.
-  val partsOf: Optic<'s, 'a> -> Optic<'s, 'a[]>
+  val partsOf: Optic<'s, 'a> -> Optic<'s, IReadOnlyList<'a>>
 
   /// Defines a new lens from a getter and setter.
   val lens: ('s -> 'a) -> ('a -> 's -> 's) -> Optic<'s, 'a>
@@ -82,25 +82,14 @@ module Optic =
   /// A lens focusing on the second element of a pair.
   val sndL: Optic<'x * 'y, 'y>
 
-module Collections =
-  /// Defines a traversal for an enumerable type.
-  val elemsOf: (IReadOnlyList<'x> -> 'xs)
-            -> Optic<'xs, 'x> when 'xs :> IEnumerable<'x>
+  /// A traversal over the elements of a list.
+  val elemsT: Optic<IReadOnlyList<'a>, 'a>
 
-  /// Defines a prism for a list type.
-  val atOf: (IReadOnlyList<'x> -> 'xs)
-         -> int -> Optic<'xs, 'x> when 'xs :> IReadOnlyList<'x>
+  /// A prism focusing on element at given index of a list.
+  val atP: int -> Optic<IReadOnlyList<'a>, 'a>
 
-module Array =
-  /// A prism focusing on element at given index in an array.
-  val atP: int -> Optic<'a[], 'a>
+  /// An isomorphism whose focus is reverse of the list.
+  val revI: Optic<IReadOnlyList<'a>, IReadOnlyList<'a>>
 
-  /// A traversal over the elements of an array.
-  val elemsT: Optic<'a[], 'a>
-
-  /// An isomorphism whose focus is reverse of the array.
-  val revI: Optic<'a[], 'a[]>
-
-module String =
   /// An isomorphism between string with separators and the separated strings.
-  val splitI: char -> Optic<string, string[]>
+  val splitI: char -> Optic<string, IReadOnlyList<string>>
