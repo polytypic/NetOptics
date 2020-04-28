@@ -51,6 +51,8 @@
   <ItemGroup>
     <Compile Include="NetOptics.Optic.fsi" />
     <Compile Include="NetOptics.Optic.fs" />
+    <Compile Include="NetOptics.History.fsi" />
+    <Compile Include="NetOptics.History.fs" />
     <Compile Include="NetOptics.fs" />
   </ItemGroup>
   <ItemGroup>

@@ -17,8 +17,9 @@ type [<Sealed>] UI =
   static member children:     #IROL<UIElement  >  -> (#Panel -> unit)
   static member children: IObs<IROL<UIElement  >> -> (#Panel -> unit)
   static member children: IObs<     UIElement[]>  -> (#Panel -> unit)
+  static member children: IObs<list<UIElement> >  -> (#Panel -> unit)
 
-  static member content: IObs<obj> -> (#ContentControl -> unit)
+  static member content: IObs<#obj> -> (#ContentControl -> unit)
   
   static member isEnabled: IObs<bool> -> (#UIElement -> unit)
   
@@ -26,8 +27,14 @@ type [<Sealed>] UI =
 
   static member isReadOnly: IObs<bool> -> (#TextBoxBase -> unit)
 
+  static member maximum: IObs<float> -> (#RangeBase -> unit)
+  static member minimum: IObs<float> -> (#RangeBase -> unit)
+  static member value: IAtom<float> -> (#RangeBase -> unit)
+
   static member text: IAtom<string> -> (#TextBox -> unit)
   static member text: IObs<string> -> (#TextBlock -> unit)
+
+  static member password: IAtom<string> -> (PasswordBox -> unit)
 
   static member onEnter: ('E -> unit) -> ('E -> unit) when 'E :> UIElement
 

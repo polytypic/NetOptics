@@ -15,6 +15,9 @@ type [<Sealed>] Atom =
   /// Requests state update with the given function.
   static member modify: IAtom<'S> -> ('S -> 'S) -> unit
 
+  /// Action to request state update with the given function.
+  static member modifyAct: IAtom<'S> -> ('S -> 'S) -> (_ -> unit)
+
   /// Requests state update with the given function and optic.
   static member modifyAt: Optic<'S, 'F, 'G, 'S>
                        -> IAtom<'S>
@@ -23,12 +26,18 @@ type [<Sealed>] Atom =
 
   /// Requests state update with the given value.
   static member set: IAtom<'S> -> 'S -> unit
+  /// Action to request update with given value.
+  static member setAct: IAtom<'S> -> 'S -> (_ -> unit)
 
   /// Requests state update with the given value and optic.
   static member setAt: Optic<'S, 'F, 'G, 'S> -> IAtom<'S> -> 'G -> unit
+  /// Action to request uddate with given value and optic.
+  static member setAtAct: Optic<'S, 'F, 'G, 'S> -> IAtom<'S> -> 'G -> (_ -> unit)
 
   /// Requests state update to remove viewed substate.
   static member remove: IAtom<'S> -> unit
+  /// Action to request update to remove viewed substate.
+  static member removeAct: IAtom<'S> -> (_ -> unit)
 
   /// Maps a view of a list of keyed elements to an observable of values
   /// constructed from views of list elements.  The `keyOf` and `mapping`
@@ -41,8 +50,8 @@ type [<Sealed>] Atom =
 
   /// Maps a view of a list of elements to an observable of values constructed
   /// from views of list elements.  The `mapping` function is considered to be
-  /// pure.  You should always prefer `mapByKey` when list elements have a
-  /// unique keys to get better caching of results.
+  /// pure.  You should always prefer directly using `mapByKey` when list
+  /// elements have unique keys to get better caching of results.
   static member map: mapping: (IAtom<'S> -> 'T)
                   -> IAtom<IROL<'S>>
                   -> IObs<IROL<'T>>

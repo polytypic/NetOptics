@@ -15,6 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		packages.config = packages.config
 		README.md = README.md
 		TODO.md = TODO.md
+		Try.fsx = Try.fsx
 	EndProjectSection
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "App.Todo", "App.Todo.fsproj", "{2BDACBD3-9392-4094-A0E5-33E1F68D5CFF}"
@@ -24,6 +25,8 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "NetOptics.Test", "NetOptics.Test.fsproj", "{BB6F952E-F8FC-4432-BC06-548E7DA4DD26}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "App.Contacts", "App.Contacts.fsproj", "{AD41D484-21F0-497E-A026-589D2A6B4F79}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "App.Login", "App.Login.fsproj", "{75E6C41A-B134-4B77-88E0-836E9B3EDC5A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,6 +58,10 @@ Global
 		{AD41D484-21F0-497E-A026-589D2A6B4F79}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AD41D484-21F0-497E-A026-589D2A6B4F79}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AD41D484-21F0-497E-A026-589D2A6B4F79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{75E6C41A-B134-4B77-88E0-836E9B3EDC5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75E6C41A-B134-4B77-88E0-836E9B3EDC5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75E6C41A-B134-4B77-88E0-836E9B3EDC5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75E6C41A-B134-4B77-88E0-836E9B3EDC5A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

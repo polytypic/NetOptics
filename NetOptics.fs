@@ -11,3 +11,6 @@ type Optic<'S> = Optic<'S, 'S>
 
 /// Short alias for the `IReadOnlyList` type.
 type IROL<'T> = Optic.IROL<'T>
+
+/// History collection type.
+type History<'S> = History.t<'S>

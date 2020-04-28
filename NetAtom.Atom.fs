@@ -36,9 +36,13 @@ type [<Sealed>] Atom =
 
   static member modifyAt o (xA: IAtom<_>) fn = xA.Modify (o, fn)
   static member modify xA fn = Atom.modifyAt Optic.idI xA fn
+  static member modifyAct xA fn = fun _ -> Atom.modify xA fn
   static member remove (xA: IAtom<_>) = xA.Modify (Optic.removeP, id)
+  static member removeAct xA = fun _ -> Atom.remove xA
   static member setAt o xA x = Atom.modifyAt o xA <| fun _ -> x
+  static member setAtAct o xA x = fun _ -> Atom.setAt o xA x
   static member set xA x = Atom.setAt Optic.idI xA x
+  static member setAct xA x = Atom.setAtAct Optic.idI xA x
 
   static member mapByKey keyOf mapping (xsA: IAtom<IROL<_>>) =
     let entries = new Dictionary<_, _>()

@@ -1,5 +1,6 @@
 module NetOptics.Optic
 
+open System
 open System.Collections.Generic
 
 type [<Struct>] Context =
@@ -198,8 +199,12 @@ let inline at ix (p: D<_, _>) (c: byref<Context>) (xs: #IROL<_>) =
     let mutable j = 0
     while i < n do
       let x = xs.[i]
-      let y = if i = ix then p.Invoke (&c, x) else x
-      if c.Hit then c.Hit <- false else ys.[j] <- y; inc &j
+      if i = ix then
+        let y = p.Invoke (&c, x)
+        if c.Hit then c.Hit <- false else ys.[j] <- y; inc &j
+      else
+        ys.[j] <- x
+        inc &j
       inc &i
     sub ys j
   else
@@ -277,3 +282,5 @@ let indexedI: t<#IROL<_>, _, #IROL<int * _>, _> = fun p ->
          (Array.distinctBy fst >> Array.sortBy fst >> Array.map snd) // TODO: opt
   << rolistI
   <| p
+
+let truncateI = iso float int<float>

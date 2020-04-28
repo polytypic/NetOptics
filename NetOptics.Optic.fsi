@@ -146,6 +146,9 @@ val pairL: fstLens: t<'S, 'L1,       'L2,       'S>
         -> sndLens: t<'S,       'R1,       'R2, 'T>
         ->          t<'S, 'L1 * 'R1, 'L2 * 'R2, 'T>
 
+/// An isomorphism between integers and floats.
+val truncateI: t<int, float, float, int>
+
 /// An isomorphism between arrays and read only lists.
 val arrayI: t<#IROL<'F>, 'F[], 'G[], IROL<'G>>
 /// An isomorphism between read only lists and arrays.

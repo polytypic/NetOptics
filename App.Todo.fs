@@ -68,24 +68,26 @@ let main _ =
   let empty = todos.Select(fun xs -> xs.Count = 0).AsProperty()
 
   let filterButton value =
-    Button (Content = sprintf "%A" value) |> UI.bind [|
-      UI.onClick <| fun _ -> Atom.set filter value
-    |]
+    Button (Content = sprintf "%A" value) |> UI.bind [
+      UI.onClick <| Atom.setAct filter value
+    ]
 
   UI.run <| Application (
     MainWindow = UI.show (
       Window (
         Title = "Todo",
+        Width = 300.0,
+        Height = 300.0,
         Content = (
-          StackPanel (Orientation = Orientation.Vertical) |> UI.bind [|
-            UI.children [|
-              DockPanel () |> UI.bind [|
-                UI.children [|
-                  CheckBox () |> UI.bind [|
+          StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
+            UI.children [
+              DockPanel () |> UI.bind [
+                UI.children [
+                  CheckBox () |> UI.bind [
                     UI.isChecked allDone
                     UI.isEnabled (empty.Select not)
-                  |]
-                  TextBox () |> UI.bind [|
+                  ]
+                  TextBox () |> UI.bind [
                     UI.text newTodo
                     UI.onEnter <| fun textBox ->
                       let title = textBox.Text
@@ -96,62 +98,61 @@ let main _ =
                                  if todos.Count = 0 then 0
                                  else todos.[todos.Count-1].Id + 1
                                Optic.set Optic.appendL
-                                 [|{Todo.Id = id
-                                    Todo.Completed = false
-                                    Todo.Title = title}|]
+                                 [{Todo.Id = id
+                                   Todo.Completed = false
+                                   Todo.Title = title}]
                                  todos
                         Atom.set newTodo ""
-                  |]
-                |]
-              |]
-              StackPanel (Orientation = Orientation.Vertical) |> UI.bind [|
-                state
+                  ]
+                ]
+              ]
+              StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
+                todos
                 |> Atom.view (filter.Select(Func<_, _>(fun f ->
-                    State.todos
-                    << Optic.rewriteI
-                        (Optic.over Optic.arrayI
-                          (Array.sortBy (Optic.view Todo.id)))
+                    Optic.rewriteI
+                      (Optic.over Optic.arrayI
+                        (Array.sortBy (Optic.view Todo.id)))
                     << Optic.filterL (Filter.predicate f))))
                 |> Atom.mapByKey (Optic.view Todo.id) (fun id todo ->
-                    DockPanel () |> UI.bind [|
-                      UI.children [|
-                        CheckBox () |> UI.bind [|
-                          UI.isChecked (Atom.view Todo.completed todo)
+                    DockPanel () |> UI.bind [
+                      UI.children [
+                        CheckBox () |> UI.bind [
+                          UI.isChecked <| Atom.view Todo.completed todo
                           UI.dock Dock.Left
-                        |]
-                        Button (Content = "Remove") |> UI.bind [|
-                          UI.onClick <| fun _ -> Atom.remove todo
+                        ]
+                        Button (Content = "Remove") |> UI.bind [
+                          UI.onClick <| Atom.removeAct todo
                           UI.dock Dock.Right
-                        |]
-                        TextBox () |> UI.bind [|
-                          UI.text (Atom.view Todo.title todo)
-                          UI.onLostFocus <| fun _ -> Atom.set editing None
+                        ]
+                        TextBox () |> UI.bind [
+                          UI.text <| Atom.view Todo.title todo
+                          UI.onLostFocus <| Atom.setAct editing None
                           UI.onEnter <| fun _ -> Keyboard.ClearFocus()
-                          UI.onMouseDoubleClick <| fun _ ->
-                            Atom.set editing <| Some id
+                          UI.onMouseDoubleClick <|
+                            Atom.setAct editing (Some id)
                           UI.isReadOnly (editing.Select(function
                             | None -> true
                             | Some id' -> id <> id'))
-                        |]
-                      |]
-                    |])
+                        ]
+                      ]
+                    ])
                 |> UI.children
-              |]
-              StackPanel (Orientation = Orientation.Horizontal) |> UI.bind [|
+              ]
+              StackPanel (Orientation = Orientation.Horizontal) |> UI.bind [
                 UI.children (empty.Select(fun empty ->
-                  if empty then [||] else [|
-                    Label () |> UI.bind [|
+                  if empty then [] else [
+                    Label () |> UI.bind [
                       UI.content (numLeft.Select(fun n ->
                         sprintf "%d item%s left" n (if n = 1 then "" else "s")
                         |> box))
-                    |]
+                    ]
                     filterButton Filter.All
                     filterButton Filter.Active
                     filterButton Filter.Completed
-                  |]))
-              |]
-            |]
-          |]
+                  ]))
+              ]
+            ]
+          ]
         )
       )
     )
