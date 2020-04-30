@@ -5,4 +5,3 @@
 - Equality of IROLs
 - Document UI helpers
 - Prose
-- Proper tests

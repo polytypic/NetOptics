@@ -73,12 +73,12 @@ val iter: t<'S, 'F, 'G, 'T> -> action: ('F -> unit) -> ('S -> unit)
 val collect: t<'S, 'F, 'G, 'T> -> 'S -> IROL<'F>
 
 /// Injects list elements to the focuses or removes them. Raises when cannot.
-val disperse: t<'S, 'F, 'G, 'T> -> values: #IROL<'G> -> ('S -> 'T)
+val disperse:     t<'S, 'F, 'G, 'T> -> values: #IROL<'G> -> ('S -> 'T)
 /// Injects list elements to the focuses or keeps them.
 val disperseKeep: t<'S, 'F, 'F, 'T> -> values: #IROL<'F> -> ('S -> 'T)
 
 /// Converts an optic to a lens focusing on an array of the focuses.
-val partsOf: t<'S, 'F, 'G, 'T> -> t<'S, IROL<'F>, #IROL<'G>, 'T>
+val partsOf:     t<'S, 'F, 'G, 'T> -> t<'S, IROL<'F>, #IROL<'G>, 'T>
 /// Converts an optic to a lens focusing on an array of the focuses.
 val partsOfKeep: t<'S, 'F, 'F, 'T> -> t<'S, IROL<'F>, #IROL<'F>, 'T>
 
@@ -87,6 +87,9 @@ val lens: project: ('S -> 'F) -> inject: ('G -> 'S -> 'T) -> t<'S, 'F, 'G, 'T>
 
 /// Defines a new isomorphism from a pair of conversion functions.
 val iso: forward: ('S -> 'F) -> backward: ('G -> 'T) -> t<'S, 'F, 'G, 'T>
+
+/// Defines a new prism from a constructor-destructor pair.
+val prism: cons: ('G -> 'T) -> dest: ('S -> Choice<'T, 'F>) -> t<'S, 'F, 'G, 'T>
 
 /// Defines a lens out of a suitable fold and a traversal.
 val foldLens: aFold: (t<'S, 'E, 'G, 'T> -> ('S -> 'F))
@@ -119,6 +122,11 @@ val removeP: t<'S, 'F, 'G, 'T>
 
 /// A prism that focuses on value of optional if any. Removable.
 val optionP: t<option<'F>, 'F, 'G, option<'G>>
+
+/// A prism that focuses on `Choice1Of2`.
+val choice1of2P: t<Choice<'F, 'S>, 'F, 'G, Choice<'G, 'S>>
+/// A prism that focuses on `Choice2Of2`.
+val choice2of2P: t<Choice<'S, 'F>, 'F, 'G, Choice<'S, 'G>>
 
 /// The identity isomorphism.
 val idI: t<'S, 'S, 'T, 'T>
@@ -155,13 +163,15 @@ val arrayI: t<#IROL<'F>, 'F[], 'G[], IROL<'G>>
 val rolistI: t<'F[], IROL<'F>, #IROL<'G>, 'G[]>
 
 /// A prism focusing on element at given index of a list. Removable.
-val atP: index: int -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
+val atP:    index:        int  -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
 /// A prism focusing on element at a mutable index of a list. Removable.
 val atRefP: indexRef: ref<int> -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
+
 /// A traversal over the elements of a list. Removable.
 val elemsT: t<#IROL<'F>, 'F, 'G, IROL<'G>>
 /// An isomorphism between lists.
 val elemsI: t<'S, 'F, 'G, 'T> -> t<#IROL<'S>, IROL<'F>, #IROL<'G>, IROL<'T>>
+
 /// An isomorphism that partitions a list into a sublists of passes and fails.
 val partitionI: predicate: ('F -> bool)
              -> t<#IROL<'F>, IROL<'F> * IROL<'F>, #IROL<'G> * #IROL<'G>, IROL<'G>>
@@ -169,12 +179,18 @@ val partitionI: predicate: ('F -> bool)
 val filterL: predicate: ('F -> bool) -> t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
 /// A lens that focuses on sublist of fails.
 val rejectL: predicate: ('F -> bool) -> t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
-/// A special optic that reads empty and prepends when written.
-val prependL: t<#IROL<'F>, IROL<'G>, #IROL<'F>, IROL<'F>>
-/// A special optic that reads empty and appends when written.
-val appendL: t<#IROL<'F>, IROL<'G>, #IROL<'F>, IROL<'F>>
+
+/// An isomorphism that splits a list into two sublists at given position.
+val splitAtI: relative: int
+          -> t<#IROL<'F>, IROL<'F> * IROL<'F>, #IROL<'G> * #IROL<'G>, IROL<'G>>
+/// A lens reads empty and prepends when written.
+val prependL: t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
+/// A lens that reads empty and appends when written.
+val appendL: t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
+
 /// An isomorphism whose focus is reverse of the list.
 val revI: t<#IROL<'F>, IROL<'F>, #IROL<'G>, IROL<'G>>
+
 /// An isomorphism  between a list and an indexed list.
 val indexedI: t<#IROL<'F>, IROL<int * 'F>, #IROL<int * 'G>, IROL<'G>>
 

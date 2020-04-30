@@ -103,10 +103,7 @@ let main _ =
         Height = 300.0,
         Content = (
           ContentControl () |> UI.bind [
-            model.LoggedIn.ObserveOnDispatcher()
-              .Select(function false -> loginView model
-                             | true -> loggedInView ())
-              .AsProperty()
+            model.LoggedIn.IfElse(loggedInView (), loginView model)
             |> UI.content
           ]
         )

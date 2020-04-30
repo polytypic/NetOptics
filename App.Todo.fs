@@ -43,8 +43,8 @@ let main _ =
   let state = Atom.create<State.t> {
     NewTodo = ""
     Todos = [|
-      {Id = 1; Completed = false; Title = "Be functional!"}
-      {Id = 2; Completed = false; Title = "Be reactive!"}
+      {Id = 1; Completed = true; Title = "Be functional!"}
+      {Id = 2; Completed = true; Title = "Be reactive!"}
       {Id = 3; Completed = false; Title = "Write cool apps!"}
     |]
     Filter = Filter.All
@@ -139,17 +139,16 @@ let main _ =
                 |> UI.children
               ]
               StackPanel (Orientation = Orientation.Horizontal) |> UI.bind [
-                UI.children (empty.Select(fun empty ->
-                  if empty then [] else [
-                    Label () |> UI.bind [
-                      UI.content (numLeft.Select(fun n ->
-                        sprintf "%d item%s left" n (if n = 1 then "" else "s")
-                        |> box))
-                    ]
-                    filterButton Filter.All
-                    filterButton Filter.Active
-                    filterButton Filter.Completed
-                  ]))
+                empty.IfElse([], [
+                  Label () |> UI.bind [
+                    numLeft.Select(fun n ->
+                      sprintf "%d item%s left" n (if n = 1 then "" else "s"))
+                    |> UI.content
+                  ]
+                  filterButton Filter.All
+                  filterButton Filter.Active
+                  filterButton Filter.Completed
+                ]) |> UI.children
               ]
             ]
           ]

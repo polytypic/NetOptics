@@ -19,13 +19,11 @@ val present: Optic.t<t<'S>, 'S, 'S, t<'S>>
 
 /// Removes entries prior to present from history.
 val undoForget: t<'S> -> t<'S>
-
-/// A lens that focuses on the undo position of history.
-val undoIndex: Optic.t<t<'S>, int, int, t<'S>>
-
 /// Removes entries following present from history.
 val redoForget: t<'S> -> t<'S>
 
+/// A lens that focuses on the undo position of history.
+val undoIndex: Optic.t<t<'S>, int, int, t<'S>>
 /// A lens that focuses on the redo position of history.
 val redoIndex: Optic.t<t<'S>, int, int, t<'S>>
 

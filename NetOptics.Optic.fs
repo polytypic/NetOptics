@@ -1,6 +1,5 @@
 module NetOptics.Optic
 
-open System
 open System.Collections.Generic
 
 type [<Struct>] Context =
@@ -105,7 +104,7 @@ let foldLens aFold aTraversal = lens (aFold aTraversal) (set aTraversal)
 let collect o s =
   let xs = ResizeArray<_>()
   iter o xs.Add s
-  xs :> IROL<_>
+  xs.ToArray() :> IROL<_>
 
 let disperseKeep (o: t<_, _, _, _>) (values: #IROL<_>) =
   let (P (p, _)) = O<|D(fun c x ->
@@ -140,6 +139,14 @@ let iso forward backward (P (p, inverted)) =
   I inverted <|D(fun c s ->
   let b = p.Invoke (&c, if inverted then nil<_> else forward s)
   if c.Over then backward b else nil<_>)
+
+let prism (gt: 'G -> 'T) (stf: 'S -> Choice<'T, 'F>) (P (p, _)) =
+  O<|D(fun c s ->
+    match stf s with
+    | Choice1Of2 t -> t
+    | Choice2Of2 f ->
+      let g = p.Invoke (&c, f)
+      if c.Over then gt g else nil<_>)
 
 let invertI anIso = iso (review anIso) (view anIso)
 
@@ -223,6 +230,17 @@ let optionP (P (p, _)) = O<|D(fun c so ->
     let s = p.Invoke (&c, s)
     if not c.Over || c.Hit then None else Some s)
 
+let choice1of2P: t<_, _, _, _> = fun p ->
+  prism Choice1Of2
+   <| function Choice1Of2 x -> Choice2Of2 x
+             | Choice2Of2 x -> Choice1Of2 (Choice2Of2 x)
+   <| p
+let choice2of2P: t<_, _, _, _> = fun p ->
+  prism Choice2Of2
+   <| function Choice1Of2 x -> Choice1Of2 (Choice1Of2 x)
+             | Choice2Of2 x -> Choice2Of2 x
+   <| p
+
 let rereadI fn = iso fn id
 let rewriteI fn = iso id fn
 let normalizeI fn = iso fn fn
@@ -241,23 +259,28 @@ let splitI sep =
   iso (fun (s: string) -> s.Split seps |> asList)
       (String.concat <| string sep: #IROL<_> -> _)
 
+let inline private append (l, r) =
+  if Array.length l = 0 then r
+  elif Array.length r = 0 then l
+  else Array.append l r
 let partitionI predicate: t<#IROL<_>, _, #IROL<_> * #IROL<_>, _> =
-  arrayI
-  << iso (Array.partition predicate) (fun (l, r) -> Array.append l r)
-  << pairI rolistI rolistI
+  arrayI << iso (Array.partition predicate) append << pairI rolistI rolistI
 let filterL predicate: t<_, _, _, _> = partitionI predicate << fstL
 let rejectL predicate: t<_, _, _, _> = partitionI predicate << sndL
 
 let elemsI i: t<#IROL<_>, _, #IROL<_>, _> =
   arrayI << iso (Array.map (view i)) (Array.map (review i)) << rolistI
 
-let inline private pendWith pend =
-  lens <| constant (asList [||])
-       <| fun ys xs -> pend (asArray ys) (asArray xs) |> asList
-let prependL: t<#IROL<_>, _, #IROL<_>, _> =
-  fun p -> pendWith (fun ys xs -> Array.append ys xs) p
-let appendL: t<#IROL<_>, _, #IROL<_>, _> =
-  fun p -> pendWith (fun ys xs -> Array.append xs ys) p
+let inline private splitAtWith fn xs =
+  let n = Array.length xs
+  let i = fn n
+  if i = 0 then ([||], xs) elif i = n then (xs, [||]) else Array.splitAt i xs
+let inline private splitAt i =
+  splitAtWith <| if i < 0 then max 0 << ((+) (i + 1)) else min i
+let splitAtI i: t<#IROL<_>, _, #IROL<_> * #IROL<_>, _> =
+  arrayI << iso (splitAt i) append << pairI rolistI rolistI
+let prependL: t<#IROL<_>, _, #IROL<_>, _> = fun p -> splitAtI 0 << fstL <| p
+let appendL: t<#IROL<_>, _, #IROL<_>, _> = fun p -> splitAtI -1 << sndL <| p
 
 let andAlso (second: t<_, _, _, _>) (first: t<_, _, _, _>) (p: Pipe<_, _>) =
   let (P (p1, _)) = first p

@@ -47,7 +47,7 @@ let countDownButton label value =
   Button () |> UI.bind [
     UI.onClick <| Atom.modifyAct value ((+) -1)
     UI.isEnabled (value.Select((<>) 0))
-    UI.content (value.Select(sprintf"%s (%d)" label >> box))
+    UI.content (value.Select(sprintf"%s (%d)" label))
   ]
 
 let historyView history =

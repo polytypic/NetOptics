@@ -7,10 +7,15 @@ open System.Windows.Controls
 open System.Windows.Controls.Primitives
 open System.Runtime.CompilerServices
 
-[<Extension>]
-type [<Sealed>] UI =
-  [<Extension>]
-  static member AsProperty: IObs<'T> -> IObs<'T>
+type ExtAttribute = ExtensionAttribute
+
+type [<Ext; Sealed>] UI =
+  [<Ext>] static member AsProperty: IObs<'T> -> IObs<'T>
+
+  [<Ext>] static member IfElse: IObs<bool> * IObs<'T> * IObs<'T> -> IObs<'T>
+  [<Ext>] static member IfElse: IObs<bool> *       'T * IObs<'T> -> IObs<'T>
+  [<Ext>] static member IfElse: IObs<bool> * IObs<'T> *      'T  -> IObs<'T>
+  [<Ext>] static member IfElse: IObs<bool> *      'T  *      'T  -> IObs<'T>
 
   static member bind: seq<'E -> unit> -> ('E -> UIElement) when 'E :> UIElement
 

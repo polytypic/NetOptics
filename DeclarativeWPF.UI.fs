@@ -10,14 +10,26 @@ open System.Windows.Input
 open System.Reactive.Linq
 open System.Runtime.CompilerServices
 
+type ExtAttribute = ExtensionAttribute
+
 module UI =
   let isVisibleProperties = ConditionalWeakTable<UIElement, IObs<bool>>()
 
-[<Extension>]
-type [<Sealed>] UI =
-  [<Extension>]
-  static member AsProperty (o: IObs<_>) =
-    o.DistinctUntilChanged().Replay(1).RefCount()
+type [<Extension; Sealed>] UI =
+  [<Ext>] static member AsProperty (o: IObs<_>) =
+            o.DistinctUntilChanged().Replay(1).RefCount()
+
+  [<Ext>] static member Cond (cond: IObs<_>, onT: IObs<_>, onF: IObs<_>) =
+            cond.Select(fun c -> if c then onT else onF).Switch()
+
+  [<Ext>] static member IfElse (cond: IObs<_>, onT: IObs<'T>, onF: IObs<'T>) =
+            cond.Cond(onT, onF).AsProperty()
+  [<Ext>] static member IfElse (cond: IObs<_>, onT:      'T , onF: IObs<'T>) =
+            cond.IfElse(Observable.Return(onT), onF)
+  [<Ext>] static member IfElse (cond: IObs<_>, onT: IObs<'T>, onF:      'T ) =
+            cond.IfElse(onT, Observable.Return(onF))
+  [<Ext>] static member IfElse (cond: IObs<_>, onT:      'T , onF:      'T ) =
+            cond.IfElse(Observable.Return(onT), Observable.Return(onF))
 
   static member isVisible (e: UIElement) =
     UI.isVisibleProperties.GetValue(e, fun e ->
@@ -32,17 +44,17 @@ type [<Sealed>] UI =
                                  (o: IObs<'x>)
                                  (action: 'x -> unit) =
     (UI.isVisible c)
-      .Select(fun b -> if b then o else Observable.Empty<_>())
-      .Switch()
+      .Cond(o, Observable.Empty<_>())
       .ObserveOnDispatcher()
       .Subscribe(action) |> ignore
 
-  static member bindAtom (c: #UIElement)
+  static member bindAtom initial
+                         (c: #UIElement)
                          (o: IObs<_>)
                          (v: IAtom<'V>)
                          (get: unit -> 'V)
                          (set: 'V -> unit) =
-    let mutable setting = true
+    let mutable setting = initial
     UI.subscribeVisible c o <| fun _ ->
       if setting then setting <- false else Atom.set v (get ())
     UI.subscribeVisible c v <| fun v ->
@@ -70,7 +82,7 @@ type [<Sealed>] UI =
     UI.subscribeVisible c o <| fun v -> c.IsEnabled <- v
 
   static member isChecked v = fun (c: #ToggleButton) ->
-    UI.bindAtom c c.Click v
+    UI.bindAtom false c (c.Checked.Merge(c.Unchecked)) v
      <| fun _ -> c.IsChecked.Value
      <| fun v -> c.IsChecked <- Nullable<bool> v
 
@@ -90,12 +102,12 @@ type [<Sealed>] UI =
     UI.subscribeVisible c v <| fun v -> c.Maximum <- v
 
   static member value v = fun (c: #RangeBase) ->
-    UI.bindAtom c c.ValueChanged v
+    UI.bindAtom true c c.ValueChanged v
      <| fun _ -> c.Value
      <| fun v -> c.Value <- v
 
   static member text v = fun (c: #TextBox) ->
-    UI.bindAtom c c.TextChanged v
+    UI.bindAtom true c c.TextChanged v
      <| fun _ -> c.Text
      <| fun v -> c.Text <- v
 
@@ -103,7 +115,7 @@ type [<Sealed>] UI =
     UI.subscribeVisible c v <| fun v -> c.Text <- v
 
   static member password v = fun (c: PasswordBox) ->
-    UI.bindAtom c c.PasswordChanged v
+    UI.bindAtom true c c.PasswordChanged v
      <| fun _ -> c.Password
      <| fun v -> c.Password <- v
 

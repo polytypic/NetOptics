@@ -7,14 +7,12 @@ type [<Sealed>] Atom =
   static member create: 'S -> IAtom<'S>
 
   /// Creates a stateless subview of state through the given lens.
-  static member view: Optic<'S, 'F> -> (IAtom<'S> -> IAtom<'F>)
-
+  static member view:      Optic<'S, 'F>  -> (IAtom<'S> -> IAtom<'F>)
   /// Creates a stateless subview of state through the given observable lens.
   static member view: IObs<Optic<'S, 'F>> -> (IAtom<'S> -> IAtom<'F>)
 
   /// Requests state update with the given function.
-  static member modify: IAtom<'S> -> ('S -> 'S) -> unit
-
+  static member modify:    IAtom<'S> -> ('S -> 'S) -> unit
   /// Action to request state update with the given function.
   static member modifyAct: IAtom<'S> -> ('S -> 'S) -> (_ -> unit)
 
@@ -25,17 +23,17 @@ type [<Sealed>] Atom =
                        -> unit
 
   /// Requests state update with the given value.
-  static member set: IAtom<'S> -> 'S -> unit
+  static member set:    IAtom<'S> -> 'S -> unit
   /// Action to request update with given value.
   static member setAct: IAtom<'S> -> 'S -> (_ -> unit)
 
   /// Requests state update with the given value and optic.
-  static member setAt: Optic<'S, 'F, 'G, 'S> -> IAtom<'S> -> 'G -> unit
+  static member setAt:    Optic<'S, 'F, 'G, 'S> -> IAtom<'S> -> 'G -> unit
   /// Action to request uddate with given value and optic.
   static member setAtAct: Optic<'S, 'F, 'G, 'S> -> IAtom<'S> -> 'G -> (_ -> unit)
 
   /// Requests state update to remove viewed substate.
-  static member remove: IAtom<'S> -> unit
+  static member remove:    IAtom<'S> -> unit
   /// Action to request update to remove viewed substate.
   static member removeAct: IAtom<'S> -> (_ -> unit)
 
