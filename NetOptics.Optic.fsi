@@ -172,7 +172,7 @@ val elemsT: t<#IROL<'F>, 'F, 'G, IROL<'G>>
 /// An isomorphism between lists.
 val elemsI: t<'S, 'F, 'G, 'T> -> t<#IROL<'S>, IROL<'F>, #IROL<'G>, IROL<'T>>
 
-/// An isomorphism that partitions a list into a sublists of passes and fails.
+/// An isomorphism that partitions a list into sublists of passes and fails.
 val partitionI: predicate: ('F -> bool)
              -> t<#IROL<'F>, IROL<'F> * IROL<'F>, #IROL<'G> * #IROL<'G>, IROL<'G>>
 /// A lens that focuses on sublist of passes.
