@@ -120,8 +120,8 @@ val zeroP: t<'S, 'F, 'G, 'S>
 /// A prism that never has a focus and signals removal of parent on over.
 val removeP: t<'S, 'F, 'G, 'T>
 
-/// A prism that focuses on value of optional if any. Removable.
-val optionP: t<option<'F>, 'F, 'G, option<'G>>
+/// A prism that focuses on `Some` value of optional if any. Removable.
+val someP: t<option<'F>, 'F, 'G, option<'G>>
 
 /// A prism that focuses on `Choice1Of2`.
 val choice1of2P: t<Choice<'F, 'S>, 'F, 'G, Choice<'G, 'S>>

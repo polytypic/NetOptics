@@ -223,7 +223,7 @@ let atP ix: t<#IROL<_>, _, _, _> =
 let atRefP ix: t<#IROL<_>, _, _, _> =
   fun (P (p, _)) -> O<|D(fun c xs -> at !ix p &c xs)
 
-let optionP (P (p, _)) = O<|D(fun c so ->
+let someP (P (p, _)) = O<|D(fun c so ->
   match so with
   | None -> None
   | Some s ->

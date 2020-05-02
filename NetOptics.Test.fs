@@ -19,7 +19,7 @@ module BST =
   open Node
 
   let rec valuesT p =
-       Optic.optionP
+       Optic.someP
     << (smallerL << valuesT
         |> Optic.andAlso valueL
         |> Optic.andAlso (greaterL << valuesT))
@@ -29,11 +29,11 @@ module BST =
     Optic.choose <| function
       | None -> Optic.idI
       | Some n ->
-        if     key < n.key then Optic.optionP << smallerL << nodeL key
-        elif n.key <   key then Optic.optionP << greaterL << nodeL key
+        if     key < n.key then Optic.someP << smallerL << nodeL key
+        elif n.key <   key then Optic.someP << greaterL << nodeL key
         else Optic.idI
 
-  let valueP key = nodeL key << Optic.optionP << valueL
+  let valueP key = nodeL key << Optic.someP << valueL
 
 let [<EntryPoint>] main _ =
   let mutable passed = 0
