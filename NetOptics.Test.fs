@@ -94,6 +94,9 @@ let [<EntryPoint>] main _ =
          << Optic.invertI (Optic.splitI '-'))
         "this-it-is"
    <| "is-it-this"
+  testEq <| Optic.view (Optic.containsL 4) [|3; 1|] <| false
+  testEq <| Optic.set (Optic.containsL 4) true [|3; 1|] <| upcast [|3; 1; 4|]
+  testEq <| Optic.set (Optic.containsL 1) false [|3; 1; 4|] <| upcast [|3; 4|]
   if failed <> 0
   then printfn "%d PASSED, %d FAILED" passed failed; 1
   else printfn "%d PASSED" passed; 0

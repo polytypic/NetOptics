@@ -167,6 +167,18 @@ val atP:    index:        int  -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
 /// A prism focusing on element at a mutable index of a list. Removable.
 val atRefP: indexRef: ref<int> -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
 
+/// A lens like optic focusing on an element that matches the given predicate.
+val findL: ('F -> bool) -> t<#IROL<'F>, option<'F>, option<'F>, IROL<'F>>
+
+/// A prism focusing on an element that matches the given prodicate.
+val findP: ('F -> bool) -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
+
+/// An isomorphism between given values and booleans.  Only truthy maps to true.
+val isOrI: falsy: 'F -> truthy: 'F -> t<'F, bool, bool, 'F> when 'F: equality
+
+/// A lens like optic focusing on whether list contains given element.
+val containsL: 'F -> t<#IROL<'F>, bool, bool, IROL<'F>> when 'F: equality
+
 /// A traversal over the elements of a list. Removable.
 val elemsT: t<#IROL<'F>, 'F, 'G, IROL<'G>>
 /// An isomorphism between lists.

@@ -16,17 +16,42 @@ type t<'S, 'F, 'G, 'T> = Pipe<'F, 'G> -> Pipe<'S, 'T>
 
 type IROL<'T> = IReadOnlyList<'T>
 
+let inline private inc (i: byref<_>) = i <- i + 1
+
+let private toArray (xs: IROL<_>) =
+  let n = xs.Count
+  let ys = Array.zeroCreate n
+  let mutable i = 0
+  use e = xs.GetEnumerator ()
+  while e.MoveNext () do
+    ys.[i] <- e.Current
+    inc &i
+  ys
+
 let inline private asArray (xs: IROL<_>) =
   match xs with
   | :? array<_> as xs -> xs
-  | _ ->
-    let n = xs.Count
-    let ys = Array.zeroCreate n
-    for i=0 to n-1 do ys.[i] <- xs.[i]
-    ys
+  | _ -> toArray xs
+
+let private removeAt i (xs: IROL<_>) =
+  let xs = asArray xs
+  let n = xs.Length
+  let ys = Array.zeroCreate (n-1)
+  for j=0 to i-1 do ys.[j] <- xs.[j]
+  for j=i+1 to n-1 do ys.[j-1] <- xs.[j]
+  ys :> IROL<_>
+
+let private setAt i y (xs: IROL<_>) =
+  let ys = toArray xs
+  ys.[i] <- y
+  ys :> IROL<_>
+
 let inline private asList (xs: _[]) = xs :> IROL<_>
 
-let inline private inc (i: byref<_>) = i <- i + 1
+let inline private append (l, r) =
+  if Array.length l = 0 then r
+  elif Array.length r = 0 then l
+  else Array.append l r
 
 let inline private constant x _ = x
 
@@ -200,20 +225,12 @@ let elemsT: t<#IROL<_>, _, _, _> = fun (P (p, _)) -> O<|D(fun c xs ->
 let inline at ix (p: D<_, _>) (c: byref<Context>) (xs: #IROL<_>) =
   let n = xs.Count
   if c.Over then
-    let xs = asArray xs
-    let ys = Array.zeroCreate n
-    let mutable i = 0
-    let mutable j = 0
-    while i < n do
-      let x = xs.[i]
-      if i = ix then
-        let y = p.Invoke (&c, x)
-        if c.Hit then c.Hit <- false else ys.[j] <- y; inc &j
-      else
-        ys.[j] <- x
-        inc &j
-      inc &i
-    sub ys j
+    if 0 <= ix && ix < n
+    then let y = p.Invoke (&c, xs.[ix])
+         if c.Hit
+         then c.Hit <- false; removeAt ix xs
+         else setAt ix y xs
+    else xs :> IROL<_>
   else
     if 0 <= ix && ix < n then p.Invoke (&c, xs.[ix]) |> ignore
     nil<_>
@@ -228,7 +245,9 @@ let someP (P (p, _)) = O<|D(fun c so ->
   | None -> None
   | Some s ->
     let s = p.Invoke (&c, s)
-    if not c.Over || c.Hit then None else Some s)
+    if c.Over then
+      if c.Hit then c.Hit <- false; None else Some s
+    else nil<_>)
 
 let choice1of2P: t<_, _, _, _> = fun p ->
   prism Choice1Of2
@@ -240,6 +259,33 @@ let choice2of2P: t<_, _, _, _> = fun p ->
    <| function Choice1Of2 x -> Choice1Of2 (Choice1Of2 x)
              | Choice2Of2 x -> Choice2Of2 x
    <| p
+
+let findL predicate: t<#IROL<_>, _, _, _> = fun (P (p, _)) ->
+  O<|D(fun c xs ->
+    match Seq.tryFindIndex predicate xs with
+    | None ->
+      let yO = p.Invoke (&c, None)
+      if c.Over
+      then match yO with
+           | _ when c.Hit -> c.Hit <- false; xs :> IROL<_>
+           | None -> xs :> IROL<_>
+           | Some y -> append (asArray xs, [|y|]) :> IROL<_>
+      else nil<_>
+    | Some i ->
+      let yO = p.Invoke (&c, Some xs.[i])
+      if c.Over
+      then match yO with
+           | _ when c.Hit -> c.Hit <- false; removeAt i xs
+           | None -> removeAt i xs
+           | Some y -> setAt i y xs
+      else nil<_>)
+
+let findP predicate = findL predicate << someP
+
+let isOrI falsy truthy =
+  iso <| (=) truthy <| function false -> falsy | true -> truthy
+
+let containsL value = findL ((=) value) << isOrI None (Some value)
 
 let rereadI fn = iso fn id
 let rewriteI fn = iso id fn
@@ -259,10 +305,6 @@ let splitI sep =
   iso (fun (s: string) -> s.Split seps |> asList)
       (String.concat <| string sep: #IROL<_> -> _)
 
-let inline private append (l, r) =
-  if Array.length l = 0 then r
-  elif Array.length r = 0 then l
-  else Array.append l r
 let partitionI predicate: t<#IROL<_>, _, #IROL<_> * #IROL<_>, _> =
   arrayI << iso (Array.partition predicate) append << pairI rolistI rolistI
 let filterL predicate: t<_, _, _, _> = partitionI predicate << fstL
