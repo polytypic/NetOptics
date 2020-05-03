@@ -8,8 +8,8 @@ open System.Reactive.Linq
 open System.Windows
 open System.Windows.Controls
 
+type Contact = {Name: string; Phone: string}
 module Contact =
-  type t = {Name: string; Phone: string}
   let name = Optic.lens (fun t -> t.Name) (fun v t -> {t with Name = v})
   let phone = Optic.lens (fun t -> t.Phone) (fun v t -> {t with Phone = v})
   let empty = {Name = ""; Phone = ""}
@@ -65,7 +65,7 @@ let historyView history =
 [<EntryPoint; STAThread>]
 let main _ =
   let state =
-    Atom.create << History.init<IROL<Contact.t>> id
+    Atom.create << History.init<IROL<_>> id
      <| [|{Name = "Would"; Phone = "you"}
           {Name = "like"; Phone = "to know?"}|]
 

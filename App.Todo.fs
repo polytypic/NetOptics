@@ -9,25 +9,26 @@ open System.Windows
 open System.Windows.Controls
 open System.Windows.Input
 
+type Todo = {Id: int; Completed: bool; Title: string}
 module Todo =
-  type t = {Id: int; Completed: bool; Title: string}
   let id = Optic.lens (fun t -> t.Id) (fun v t -> {t with Id = v})
   let completed =
     Optic.lens (fun t -> t.Completed) (fun v t -> {t with Completed = v})
   let title = Optic.lens (fun t -> t.Title) (fun v t -> {t with Title = v})
 
+type Filter = All | Active | Completed
 module Filter =
-  type t = All | Active | Completed
-  let predicate: t -> Todo.t -> bool = function
+  let predicate: Filter -> Todo -> bool = function
     | All -> fun _ -> true
     | Active -> fun t -> not t.Completed
     | Completed -> fun t -> t.Completed
 
+type State =
+  { NewTodo: string
+    Todos: IROL<Todo>
+    Filter: Filter
+    Editing: option<int> }
 module State =
-  type t = {NewTodo: string
-            Todos: IROL<Todo.t>
-            Filter: Filter.t
-            Editing: option<int>}
   let todos = Optic.lens (fun t -> t.Todos) (fun v t -> {t with Todos = v})
   let newTodo =
     Optic.lens (fun t -> t.NewTodo) (fun v t -> {t with NewTodo = v})
@@ -40,7 +41,7 @@ module Todos =
 
 [<EntryPoint; STAThread>]
 let main _ =
-  let state = Atom.create<State.t> {
+  let state = Atom.create {
     NewTodo = ""
     Todos = [|
       {Id = 1; Completed = true; Title = "Be functional!"}

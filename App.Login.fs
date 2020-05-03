@@ -9,8 +9,8 @@ open System.Reactive.Subjects
 open System.Windows
 open System.Windows.Controls
 
+type Credentials = {Username: string; Password: string}
 module Credentials =
-  type t = {Username: string; Password: string}
   let username =
     Optic.lens (fun t -> t.Username) (fun v t -> {t with Username = v})
   let password =
@@ -18,7 +18,7 @@ module Credentials =
   let empty = {Username = ""; Password = ""}
 
 module Api =
-  let private pass: Credentials.t = {Username = "simon"; Password = "letmein"}
+  let private pass = {Username = "simon"; Password = "letmein"}
   let login credentials =
     Observable.Return(())
       .Delay(TimeSpan.FromSeconds 2.0)
@@ -26,7 +26,7 @@ module Api =
 
 module Model =
   type t = {
-      Credentials: IAtom<Credentials.t>
+      Credentials: IAtom<Credentials>
       HasEmptyCredentials: IObs<bool>
       LoginPressed: Subject<unit>
       LoggedIn: IObs<bool>
@@ -35,7 +35,7 @@ module Model =
       LoginEnabled: IObs<bool>
     }
 
-  let create (credentials: IAtom<Credentials.t>) =
+  let create (credentials: IAtom<_>) =
     let loginPressed = new Subject<unit>()
     let hasEmptyCredentials =
       credentials.Select(fun c -> c.Username = "" || c.Password = "")
