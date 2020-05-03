@@ -120,6 +120,13 @@ val zeroP: t<'S, 'F, 'G, 'S>
 /// A prism that never has a focus and signals removal of parent on over.
 val removeP: t<'S, 'F, 'G, 'T>
 
+/// A lens like optic that signals removal when written value matches predicate.
+val removeIfL: predicate: ('G -> bool) -> t<'F, 'F, 'G, 'G>
+/// A lens like optic that signals removal when written with equal value.
+val removeEqL: value: 'G -> t<'F, 'F, 'G, 'G> when 'G: equality
+
+val defaultsI: value: 'F -> t<option<'F>, 'F, 'F, option<'F>> when 'F: equality
+
 /// A prism that focuses on `Some` value of optional if any. Removable.
 val someP: t<option<'F>, 'F, 'G, option<'G>>
 

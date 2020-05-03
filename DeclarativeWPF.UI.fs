@@ -31,6 +31,13 @@ type [<Extension; Sealed>] UI =
   [<Ext>] static member IfElse (cond: IObs<_>, onT:      'T , onF:      'T ) =
             cond.IfElse(Observable.Return(onT), Observable.Return(onF))
 
+  static member lift1 (fn: 'S1 -> 'T) = fun (x1: #IObs<'S1>) ->
+    x1.Select(fn).AsProperty()
+
+  static member lift2 (fn: 'S1 -> 'S2 -> 'T) =
+    fun (x1: #IObs<'S1>) (x2: #IObs<'S2>) ->
+      Observable.CombineLatest(x1, x2, fn).AsProperty()
+
   static member isVisible (e: UIElement) =
     UI.isVisibleProperties.GetValue(e, fun e ->
       e.IsVisibleChanged.Select(fun _ -> e.IsVisible).AsProperty())

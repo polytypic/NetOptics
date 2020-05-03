@@ -115,6 +115,14 @@ let trySet o alue = tryOver o (constant alue)
 
 let removeP: t<_, _, _, _> = fun _ -> O<|D(fun c _ -> c.Hit <- c.Over; nil<_>)
 
+let removeIfL predicate (P (p, _)) =
+  O<|D(fun c x ->
+    let y = p.Invoke (&c, x)
+    if c.Over
+    then if predicate y then c.Hit <- true; nil<_> else y
+    else nil<_>)
+let removeEqL value = removeIfL ((=) value)
+
 let canRemove (o: t<_, _, _, _>) = canOver (o << removeP) id
 let remove (o: t<_, _, _, _>) = over (o << removeP) id
 let tryRemove (o: t<_, _, _, _>) = tryOver (o << removeP) id
@@ -284,6 +292,10 @@ let findP predicate = findL predicate << someP
 
 let isOrI falsy truthy =
   iso <| (=) truthy <| function false -> falsy | true -> truthy
+
+let defaultsI value =
+  iso <| Option.defaultValue value
+      <| fun v -> if v = value then None else Some v
 
 let containsL value = findL ((=) value) << isOrI None (Some value)
 

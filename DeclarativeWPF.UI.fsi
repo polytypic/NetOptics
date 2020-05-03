@@ -17,6 +17,9 @@ type [<Ext; Sealed>] UI =
   [<Ext>] static member IfElse: IObs<bool> * IObs<'T> *      'T  -> IObs<'T>
   [<Ext>] static member IfElse: IObs<bool> *      'T  *      'T  -> IObs<'T>
 
+  static member lift1: ('S1 -> 'T) -> (#IObs<'S1> -> IObs<'T>)
+  static member lift2: ('S1 -> 'S2 -> 'T) -> (#IObs<'S1> -> #IObs<'S2> -> IObs<'T>)
+
   static member bind: seq<'E -> unit> -> ('E -> UIElement) when 'E :> UIElement
 
   static member children:     #IROL<UIElement  >  -> (#Panel -> unit)
