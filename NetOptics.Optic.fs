@@ -355,9 +355,9 @@ let pairL o1 o2 =
 
 let indexedI: t<#IROL<_>, _, #IROL<int * _>, _> = fun p ->
   arrayI
-  << iso (Array.mapi <| fun i x -> (i, x))
-         (Array.distinctBy fst >> Array.sortBy fst >> Array.map snd) // TODO: opt
-  << rolistI
-  <| p
+   << iso (Array.mapi <| fun i x -> (i, x))
+          (Array.distinctBy fst >> Array.sortBy fst >> Array.map snd) // TODO: opt
+   << rolistI
+   <| p
 
 let truncateI = iso float int<float>

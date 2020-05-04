@@ -4,7 +4,6 @@ open DeclarativeWPF
 open NetAtom
 open NetOptics
 open System
-open System.Reactive.Linq
 open System.Windows
 open System.Windows.Controls
 open System.Windows.Input
@@ -48,7 +47,7 @@ let main _ =
       {Id = 2; Completed = true; Title = "Be reactive!"}
       {Id = 3; Completed = false; Title = "Write cool apps!"}
     |]
-    Filter = Filter.All
+    Filter = All
     Editing = None
   }
 
@@ -58,15 +57,12 @@ let main _ =
   let editing = Atom.view State.editing state
 
   let allDone =
-    todos
-    |> Atom.view (Optic.foldLens (Optic.forall id) Todos.completed)
+    todos |> Atom.view (Optic.foldLens (Optic.forall id) Todos.completed)
 
   let numLeft =
-    todos
-     .Select(Optic.fold 0 (fun s b -> if b then s else s+1) Todos.completed)
-     .AsProperty()
+    UI.lift1 (Optic.count (Todos.completed << Optic.whereP not)) todos
 
-  let empty = todos.Select(fun xs -> xs.Count = 0).AsProperty()
+  let empty = UI.lift1 (fun (xs: IROL<_>) -> xs.Count = 0) todos
 
   let filterButton value =
     Button (Content = sprintf "%A" value) |> UI.bind [
@@ -86,7 +82,7 @@ let main _ =
                 UI.children [
                   CheckBox () |> UI.bind [
                     UI.isChecked allDone
-                    UI.isEnabled (empty.Select not)
+                    UI.isEnabled <| UI.lift1 not empty
                   ]
                   TextBox () |> UI.bind [
                     UI.text newTodo
@@ -109,12 +105,16 @@ let main _ =
               ]
               StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
                 todos
-                |> Atom.view (filter.Select(Func<_, _>(fun f ->
-                    Optic.rewriteI
-                      (Optic.over Optic.arrayI
-                        (Array.sortBy (Optic.view Todo.id)))
-                    << Optic.filterL (Filter.predicate f))))
-                |> Atom.mapByKey (Optic.view Todo.id) (fun id todo ->
+                 |> Atom.view
+                      (UI.lift1
+                       <| fun filter ->
+                            Optic.rewriteI
+                              (Optic.over Optic.arrayI
+                                (Array.sortBy (Optic.view Todo.id)))
+                               << Optic.filterL (Filter.predicate filter)
+                       <| filter)
+                 |> Atom.mapByKey (Optic.view Todo.id) (fun id todo ->
+                    let editing = Atom.view (Optic.isOrI None (Some id)) editing
                     DockPanel () |> UI.bind [
                       UI.children [
                         CheckBox () |> UI.bind [
@@ -127,13 +127,10 @@ let main _ =
                         ]
                         TextBox () |> UI.bind [
                           UI.text <| Atom.view Todo.title todo
-                          UI.onLostFocus <| Atom.setAct editing None
+                          UI.onLostFocus <| Atom.setAct editing false
                           UI.onEnter <| fun _ -> Keyboard.ClearFocus()
-                          UI.onMouseDoubleClick <|
-                            Atom.setAct editing (Some id)
-                          UI.isReadOnly (editing.Select(function
-                            | None -> true
-                            | Some id' -> id <> id'))
+                          UI.onMouseDoubleClick <| Atom.setAct editing true
+                          UI.isReadOnly <| UI.lift1 not editing
                         ]
                       ]
                     ])
@@ -142,13 +139,14 @@ let main _ =
               StackPanel (Orientation = Orientation.Horizontal) |> UI.bind [
                 empty.IfElse([], [
                   Label () |> UI.bind [
-                    numLeft.Select(fun n ->
-                      sprintf "%d item%s left" n (if n = 1 then "" else "s"))
-                    |> UI.content
+                    UI.lift1 (fun n ->
+                        sprintf "%d item%s left" n (if n = 1 then "" else "s"))
+                      numLeft
+                     |> UI.content
                   ]
-                  filterButton Filter.All
-                  filterButton Filter.Active
-                  filterButton Filter.Completed
+                  filterButton All
+                  filterButton Active
+                  filterButton Completed
                 ]) |> UI.children
               ]
             ]

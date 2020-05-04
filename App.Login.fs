@@ -38,8 +38,7 @@ module Model =
   let create (credentials: IAtom<_>) =
     let loginPressed = new Subject<unit>()
     let hasEmptyCredentials =
-      credentials.Select(fun c -> c.Username = "" || c.Password = "")
-        .AsProperty()
+      UI.lift1 (fun c -> c.Username = "" || c.Password = "") credentials
     let loginResult =
       loginPressed
         .SelectMany(fun _ -> credentials.Take(1))
@@ -50,19 +49,16 @@ module Model =
         loginPressed.Select(fun _ -> true),
         loginResult.Select(fun _ -> false)
       ).StartWith(false).AsProperty()
-    let inputDisabled =
-      Observable.CombineLatest(loggedIn, loginInProgress, (||)).AsProperty()
-    let loginDisabled =
-      Observable.CombineLatest(hasEmptyCredentials, inputDisabled, (||))
-        .AsProperty()
+    let inputDisabled = UI.lift2 (||) loggedIn loginInProgress
+    let loginDisabled = UI.lift2 (||) hasEmptyCredentials inputDisabled
     {
       Credentials = credentials
       HasEmptyCredentials = hasEmptyCredentials
       LoginPressed = loginPressed
       LoggedIn = loggedIn
       LoginInProgress = loginInProgress
-      InputEnabled = inputDisabled.Select(not).AsProperty()
-      LoginEnabled = loginDisabled.Select(not).AsProperty()
+      InputEnabled = UI.lift1 not inputDisabled
+      LoginEnabled = UI.lift1 not loginDisabled
     }
 
 let loginView (model: Model.t) =
@@ -104,7 +100,7 @@ let main _ =
         Content = (
           ContentControl () |> UI.bind [
             model.LoggedIn.IfElse(loggedInView (), loginView model)
-            |> UI.content
+             |> UI.content
           ]
         )
       )

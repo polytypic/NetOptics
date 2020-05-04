@@ -4,7 +4,6 @@ open DeclarativeWPF
 open NetAtom
 open NetOptics
 open System
-open System.Reactive.Linq
 open System.Windows
 open System.Windows.Controls
 
@@ -46,8 +45,8 @@ let contactsView contacts =
 let countDownButton label value =
   Button () |> UI.bind [
     UI.onClick <| Atom.modifyAct value ((+) -1)
-    UI.isEnabled (value.Select((<>) 0))
-    UI.content (value.Select(sprintf"%s (%d)" label))
+    UI.isEnabled (UI.lift1 ((<>) 0) value)
+    UI.content (UI.lift1 (sprintf"%s (%d)" label) value)
   ]
 
 let historyView history =
@@ -56,7 +55,7 @@ let historyView history =
       countDownButton "Undo" <| Atom.view History.undoIndex history
       countDownButton "Redo" <| Atom.view History.redoIndex history
       Slider (Minimum = 0.0, SmallChange = 1.0) |> UI.bind [
-        UI.maximum (history.Select(History.indexMax >> float))
+        UI.maximum (UI.lift1 (History.indexMax >> float) history)
         UI.value <| Atom.view (History.index << Optic.truncateI) history
       ]
     ]

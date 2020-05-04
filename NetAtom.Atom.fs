@@ -92,5 +92,5 @@ type [<Sealed>] Atom =
 
   static member map mapping vs =
     vs
-    |> Atom.view Optic.indexedI
-    |> Atom.mapByKey fst (fun _ kv -> kv |> Atom.view Optic.sndL |> mapping)
+     |> Atom.view Optic.indexedI
+     |> Atom.mapByKey fst (fun _ -> Atom.view Optic.sndL >> mapping)

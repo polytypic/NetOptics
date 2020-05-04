@@ -19,11 +19,11 @@ module BST =
   open Node
 
   let rec valuesT p =
-       Optic.someP
-    << (smallerL << valuesT
-        |> Optic.andAlso valueL
-        |> Optic.andAlso (greaterL << valuesT))
-    <| p
+    Optic.someP
+     << (smallerL << valuesT
+         |> Optic.andAlso valueL
+         |> Optic.andAlso (greaterL << valuesT))
+     <| p
 
   let rec nodeL key =
     Optic.choose <| function
@@ -97,6 +97,15 @@ let [<EntryPoint>] main _ =
   testEq <| Optic.view (Optic.containsL 4) [|3; 1|] <| false
   testEq <| Optic.set (Optic.containsL 4) true [|3; 1|] <| upcast [|3; 1; 4|]
   testEq <| Optic.set (Optic.containsL 1) false [|3; 1; 4|] <| upcast [|3; 4|]
+  testEq
+   <| (History.init id 1
+        |> Optic.set History.present 2
+        |> Optic.set History.present 3
+        |> Optic.over History.undoIndex ((+) -1)
+        |> History.redoForget
+        |> History.undoForget
+        |> Optic.view History.present)
+   <| 2
   if failed <> 0
   then printfn "%d PASSED, %d FAILED" passed failed; 1
   else printfn "%d PASSED" passed; 0
