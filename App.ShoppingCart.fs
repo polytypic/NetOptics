@@ -23,8 +23,9 @@ let removableElem removable =
 type CartItem = {Id: int; Count: int}
 module CartItem =
   let id t = t.Id
-  let count = Optic.lens (fun t -> t.Count) (fun v t -> {t with Count = v})
-  let removableCount = count << Optic.removeEqL 0 << Optic.rewriteI (max 0)
+  let count =
+    Optic.lens (fun t -> t.Count) (fun v t -> {t with Count = v})
+    << Optic.removeEqL 0 << Optic.rewriteI (max 0)
   let byId Id = Optic.findL (id >> (=) Id) << Optic.defaultsI {Id=Id; Count=0}
 
 type InventoryItem = {Id: int; Name: string; Price: float}
@@ -32,7 +33,7 @@ type InventoryItem = {Id: int; Name: string; Price: float}
 let itemControlsElem cartItem =
   stackElems Orientation.Horizontal [
     removableElem cartItem
-    counterElem <| Atom.view CartItem.removableCount cartItem
+    counterElem <| Atom.view CartItem.count cartItem
   ]
 
 let cartItemElem inventory id cartItem =
