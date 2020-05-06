@@ -62,20 +62,23 @@ module Model =
     }
 
 let loginView (model: Model.t) =
-  StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
+  UI.elem StackPanel [
+    UI.orientation Orientation.Vertical
     UI.children [
-      TextBox () |> UI.bind [
+      UI.elem TextBox [
         UI.isEnabled model.InputEnabled
-        UI.text <| Atom.view Credentials.username model.Credentials
+        Atom.view Credentials.username model.Credentials |> UI.text
       ]
-      PasswordBox () |> UI.bind [
+      UI.elem PasswordBox [
         UI.isEnabled model.InputEnabled
         UI.password <| Atom.view Credentials.password model.Credentials
         UI.onEnter <| fun _ -> model.LoginPressed.OnNext ()
       ]
-      StackPanel (Orientation = Orientation.Horizontal) |> UI.bind [
+      UI.elem StackPanel [
+        UI.orientation Orientation.Horizontal
         UI.children [
-          Button (Content = "Login") |> UI.bind [
+          UI.elem Button [
+            UI.content "Login"
             UI.isEnabled model.LoginEnabled
             UI.onClick <| fun _ -> model.LoginPressed.OnNext ()
           ]
@@ -84,8 +87,7 @@ let loginView (model: Model.t) =
     ]
   ]
 
-let loggedInView () =
-  TextBlock (Text = "👍😄👍") |> UI.bind []
+let loggedInView = UI.elem TextBlock [UI.text "👍😄👍"]
 
 [<EntryPoint; STAThread>]
 let main _ =
@@ -93,16 +95,11 @@ let main _ =
 
   UI.run <| Application (
     MainWindow = UI.show (
-      Window (
-        Title = "Login",
-        Width = 300.0,
-        Height = 300.0,
-        Content = (
-          ContentControl () |> UI.bind [
-            model.LoggedIn.IfElse(loggedInView (), loginView model)
-             |> UI.content
-          ]
-        )
-      )
+      UI.window Window [
+        UI.title "Login"
+        UI.width 300.0
+        UI.height 300.0
+        UI.content (model.LoggedIn.IfElse(loggedInView, loginView model))
+      ]
     )
   )

@@ -65,26 +65,28 @@ let main _ =
   let empty = UI.lift1 (fun (xs: IROL<_>) -> xs.Count = 0) todos
 
   let filterButton value =
-    Button (Content = sprintf "%A" value) |> UI.bind [
+    UI.elem Button [
+      sprintf "%A" value |> UI.content
       UI.onClick <| Atom.setAct filter value
     ]
 
   UI.run <| Application (
     MainWindow = UI.show (
-      Window (
-        Title = "Todo",
-        Width = 300.0,
-        Height = 300.0,
-        Content = (
-          StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
+      UI.window Window [
+        UI.title "Todo"
+        UI.width 300.0
+        UI.height 300.0
+        UI.content (
+          UI.elem StackPanel [
+            UI.orientation Orientation.Vertical
             UI.children [
-              DockPanel () |> UI.bind [
+              UI.elem DockPanel [
                 UI.children [
-                  CheckBox () |> UI.bind [
+                  UI.elem CheckBox [
                     UI.isChecked allDone
                     UI.isEnabled <| UI.lift1 not empty
                   ]
-                  TextBox () |> UI.bind [
+                  UI.elem TextBox [
                     UI.text newTodo
                     UI.onEnter <| fun textBox ->
                       let title = textBox.Text
@@ -103,7 +105,8 @@ let main _ =
                   ]
                 ]
               ]
-              StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
+              UI.elem StackPanel [
+                UI.orientation Orientation.Vertical
                 todos
                  |> Atom.view
                       (UI.lift1
@@ -115,18 +118,19 @@ let main _ =
                        <| filter)
                  |> Atom.mapByKey (Optic.view Todo.id) (fun id todo ->
                     let editing = Atom.view (Optic.isOrI None (Some id)) editing
-                    DockPanel () |> UI.bind [
+                    UI.elem DockPanel [
                       UI.children [
-                        CheckBox () |> UI.bind [
+                        UI.elem CheckBox [
                           UI.isChecked <| Atom.view Todo.completed todo
                           UI.dock Dock.Left
                         ]
-                        Button (Content = "Remove") |> UI.bind [
+                        UI.elem Button [
+                          UI.content "Remove"
                           UI.onClick <| Atom.removeAct todo
                           UI.dock Dock.Right
                         ]
-                        TextBox () |> UI.bind [
-                          UI.text <| Atom.view Todo.title todo
+                        UI.elem TextBox [
+                          Atom.view Todo.title todo |> UI.text
                           UI.onLostFocus <| Atom.setAct editing false
                           UI.onEnter <| fun _ -> Keyboard.ClearFocus()
                           UI.onMouseDoubleClick <| Atom.setAct editing true
@@ -136,9 +140,10 @@ let main _ =
                     ])
                 |> UI.children
               ]
-              StackPanel (Orientation = Orientation.Horizontal) |> UI.bind [
+              UI.elem StackPanel [
+                UI.orientation Orientation.Horizontal
                 empty.IfElse([], [
-                  Label () |> UI.bind [
+                  UI.elem Label [
                     UI.lift1 (fun n ->
                         sprintf "%d item%s left" n (if n = 1 then "" else "s"))
                       numLeft
@@ -152,6 +157,6 @@ let main _ =
             ]
           ]
         )
-      )
+      ]
     )
   )

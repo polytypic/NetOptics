@@ -10,6 +10,8 @@ open System.Windows.Input
 open System.Reactive.Linq
 open System.Runtime.CompilerServices
 
+type UI<'T> = Pure of (unit -> 'T)
+
 type ExtAttribute = ExtensionAttribute
 
 module UI =
@@ -42,10 +44,20 @@ type [<Extension; Sealed>] UI =
     UI.isVisibleProperties.GetValue(e, fun e ->
       e.IsVisibleChanged.Select(fun _ -> e.IsVisible).AsProperty())
 
-  static member bind (bs: seq<'E -> unit> when 'E :> UIElement) = fun (c: 'E) ->
-    for b in bs do
-      b c
-    c :> UIElement
+  static member wrap (cast: 'E -> 'R) (constructor: unit -> 'E) =
+    fun (bindings: #IROL<'E -> unit>) -> Pure <| fun () ->
+      let element = constructor ()
+      for binding in bindings do
+        binding element
+      cast element
+  static member elem (constructor: unit -> 'E when 'E :> UIElement) =
+    fun (bindings: #IROL<'E -> unit>) ->
+      UI.wrap (fun x -> x :> UIElement) constructor bindings
+  static member window (constructor: unit -> 'E when 'E :> Window) =
+    fun (bindings: #IROL<'E -> unit>) ->
+      UI.wrap (fun x -> x :> Window) constructor bindings
+
+  static member instantiate (Pure ui) = ui ()
 
   static member subscribeVisible (c: #UIElement)
                                  (o: IObs<'x>)
@@ -67,23 +79,38 @@ type [<Extension; Sealed>] UI =
     UI.subscribeVisible c v <| fun v ->
       if get () <> v then setting <- true; set v
 
-  static member children (es: #IROL<UIElement>) = fun (c: #Panel) ->
+  static member children (es: #IROL<UI<UIElement>>) = fun (c: #Panel) ->
     let c = c.Children
     c.Clear ()
     for e in es do
-      c.Add e |> ignore
+      c.Add (UI.instantiate e) |> ignore
 
-  static member children (es: IObs<IROL<UIElement>>) =
+  static member children (es: IObs<IROL<UI<UIElement>>>) =
     fun (c: #Panel) -> UI.subscribeVisible c es <| fun es -> UI.children es c
 
-  static member children (es: IObs<UIElement[]>) = fun (c: #Panel) ->
+  static member children (es: IObs<UI<UIElement>[]>) = fun (c: #Panel) ->
     UI.subscribeVisible c es <| fun es -> UI.children es c
 
-  static member children (es: IObs<list<UIElement>>) = fun (c: #Panel) ->
+  static member children (es: IObs<list<UI<UIElement>>>) = fun (c: #Panel) ->
     UI.subscribeVisible c es <| fun es -> UI.children es c
+
+  static member orientation v = fun (c: #StackPanel) -> c.Orientation <- v
+
+  static member title t = fun (c: #Window) -> c.Title <- t
+
+  static member width v = fun (c: #FrameworkElement) -> c.Width <- v
+  static member height v = fun (c: #FrameworkElement) -> c.Height <- v
+
+  static member content (v: obj) = fun (c: #ContentControl) -> c.Content <- v
 
   static member content (o: IObs<#obj>) = fun (c: #ContentControl) ->
     UI.subscribeVisible c o <| fun v -> c.Content <- v
+
+  static member content (Pure v: UI<UIElement>) = fun (c: #ContentControl) ->
+    c.Content <- v ()
+
+  static member content (o: IObs<UI<UIElement>>) = fun (c: #ContentControl) ->
+    UI.subscribeVisible c o <| fun (Pure v) -> c.Content <- v ()
 
   static member isEnabled (o: IObs<bool>) = fun (c: #UIElement) ->
     UI.subscribeVisible c o <| fun v -> c.IsEnabled <- v
@@ -102,11 +129,15 @@ type [<Extension; Sealed>] UI =
         .Select(fun e -> e.Handled <- true)
     UI.subscribeVisible c enter <| fun _ -> action c
 
+  static member maximum v = fun (c: #RangeBase) -> c.Maximum <- v
   static member maximum v = fun (c: #RangeBase) ->
     UI.subscribeVisible c v <| fun v -> c.Maximum <- v
 
+  static member minimum v = fun (c: #RangeBase) -> c.Minimum <- v
   static member minimum v = fun (c: #RangeBase) ->
     UI.subscribeVisible c v <| fun v -> c.Maximum <- v
+
+  static member smallChange v = fun (c: #RangeBase) -> c.SmallChange <- v
 
   static member value v = fun (c: #RangeBase) ->
     UI.bindAtom true c c.ValueChanged v
@@ -117,6 +148,8 @@ type [<Extension; Sealed>] UI =
     UI.bindAtom true c c.TextChanged v
      <| fun _ -> c.Text
      <| fun v -> c.Text <- v
+
+  static member text v = fun (c: #TextBlock) -> c.Text <- v
 
   static member text (v: IObs<string>) = fun (c: #TextBlock) ->
     UI.subscribeVisible c v <| fun v -> c.Text <- v
@@ -137,6 +170,9 @@ type [<Extension; Sealed>] UI =
 
   static member dock d = fun (c: #UIElement) -> DockPanel.SetDock(c, d)
 
-  static member show (w: Window) = w.Show (); w
+  static member show (Pure w: UI<Window>) =
+    let w = w()
+    w.Show ()
+    w
 
   static member run (a: Application) = a.Run ()

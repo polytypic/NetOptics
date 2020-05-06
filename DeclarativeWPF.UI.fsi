@@ -7,6 +7,8 @@ open System.Windows.Controls
 open System.Windows.Controls.Primitives
 open System.Runtime.CompilerServices
 
+type UI<'T>
+
 type ExtAttribute = ExtensionAttribute
 
 type [<Ext; Sealed>] UI =
@@ -18,16 +20,32 @@ type [<Ext; Sealed>] UI =
   [<Ext>] static member IfElse: IObs<bool> *      'T  *      'T  -> IObs<'T>
 
   static member lift1: ('S1 -> 'T) -> (#IObs<'S1> -> IObs<'T>)
-  static member lift2: ('S1 -> 'S2 -> 'T) -> (#IObs<'S1> -> #IObs<'S2> -> IObs<'T>)
+  static member lift2: ('S1 -> 'S2 -> 'T)
+                    -> (#IObs<'S1> -> #IObs<'S2> -> IObs<'T>)
 
-  static member bind: seq<'E -> unit> -> ('E -> UIElement) when 'E :> UIElement
+  static member elem: constructor: (unit -> 'E)
+                   -> (#IROL<'E -> unit> -> UI<UIElement>) when 'E :> UIElement
 
-  static member children:     #IROL<UIElement  >  -> (#Panel -> unit)
-  static member children: IObs<IROL<UIElement  >> -> (#Panel -> unit)
-  static member children: IObs<     UIElement[]>  -> (#Panel -> unit)
-  static member children: IObs<list<UIElement> >  -> (#Panel -> unit)
+  static member window: constructor: (unit -> 'W)
+                     -> (#IROL<'W -> unit> -> UI<Window>) when 'W :> Window
 
+  static member children:     #IROL<UI<UIElement>  >  -> (#Panel -> unit)
+  static member children: IObs<IROL<UI<UIElement>  >> -> (#Panel -> unit)
+  static member children: IObs<     UI<UIElement>[]>  -> (#Panel -> unit)
+  static member children: IObs<list<UI<UIElement>> >  -> (#Panel -> unit)
+
+  static member orientation: Orientation -> (#StackPanel -> unit)
+
+  static member title: string -> (#Window -> unit)
+
+  static member width:  float -> (#FrameworkElement -> unit)
+  static member height: float -> (#FrameworkElement -> unit)
+
+  static member content:       obj  -> (#ContentControl -> unit)
   static member content: IObs<#obj> -> (#ContentControl -> unit)
+
+  static member content:      UI<UIElement>  -> (#ContentControl -> unit)
+  static member content: IObs<UI<UIElement>> -> (#ContentControl -> unit)
   
   static member isEnabled: IObs<bool> -> (#UIElement -> unit)
   
@@ -35,11 +53,18 @@ type [<Ext; Sealed>] UI =
 
   static member isReadOnly: IObs<bool> -> (#TextBoxBase -> unit)
 
+  static member maximum:      float  -> (#RangeBase -> unit)
   static member maximum: IObs<float> -> (#RangeBase -> unit)
+  static member minimum:      float  -> (#RangeBase -> unit)
   static member minimum: IObs<float> -> (#RangeBase -> unit)
+
+  static member smallChange: float -> (#RangeBase -> unit)
+
   static member value: IAtom<float> -> (#RangeBase -> unit)
 
   static member text: IAtom<string> -> (#TextBox -> unit)
+
+  static member text:      string  -> (#TextBlock -> unit)
   static member text: IObs<string> -> (#TextBlock -> unit)
 
   static member password: IAtom<string> -> (PasswordBox -> unit)
@@ -55,6 +80,6 @@ type [<Ext; Sealed>] UI =
 
   static member dock: Dock -> (#UIElement -> unit)
 
-  static member show: Window -> Window
+  static member show: UI<Window> -> Window
 
   static member run: Application -> int

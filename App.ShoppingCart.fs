@@ -8,21 +8,17 @@ open System.Windows
 open System.Windows.Controls
 
 let stackElems orientation (children: IROL<_>) =
-  StackPanel (Orientation = orientation) |> UI.bind [UI.children children]
+  UI.elem StackPanel [UI.orientation orientation; UI.children children]
 
 let counterElem count =
   stackElems Orientation.Horizontal [
-    Button (Content = "-") |> UI.bind [
-      UI.onClick <| Atom.modifyAct count ((+) -1)
-    ]
-    Label () |> UI.bind [UI.content (UI.lift1 string count)]
-    Button (Content = "+") |> UI.bind [
-      UI.onClick <| Atom.modifyAct count ((+) +1)
-    ]
+    UI.elem Button [UI.content "-"; UI.onClick <| Atom.modifyAct count ((+) -1)]
+    UI.elem Label [UI.content (UI.lift1 string count)]
+    UI.elem Button [UI.content "+"; UI.onClick <| Atom.modifyAct count ((+) +1)]
   ]
 
 let removableElem removable =
-  Button (Content = "🗑️") |> UI.bind [UI.onClick (Atom.removeAct removable)]
+  UI.elem Button [UI.content "🗑️"; UI.onClick (Atom.removeAct removable)]
 
 type CartItem = {Id: int; Count: int}
 module CartItem =
@@ -43,7 +39,7 @@ let cartItemElem inventory id cartItem =
   let inventoryItem = Map.find id inventory
   stackElems Orientation.Horizontal [
     itemControlsElem cartItem
-    Label (Content = inventoryItem.Name)
+    UI.elem Label [UI.content inventoryItem.Name]
   ]
 
 let cartElem inventory cart =
@@ -54,27 +50,26 @@ let cartElem inventory cart =
             let info = Map.find item.Id inventory
             info.Price * float item.Count))
   stackElems Orientation.Vertical [
-    Label (Content = "Shopping Cart")
-    StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
+    UI.elem Label [UI.content "Shopping Cart"]
+    UI.elem StackPanel [
+      UI.orientation Orientation.Vertical
       cart
        |> Atom.mapByKey CartItem.id (cartItemElem inventory)
        |> UI.children
     ]
-    Label () |> UI.bind [
-      UI.content (UI.lift1 (sprintf "Total: %.2f") total)
-    ]
+    UI.elem Label [UI.content (UI.lift1 (sprintf "Total: %.2f") total)]
   ]
 
 let inventoryItemElem cart (inventoryItem: InventoryItem) =
   stackElems Orientation.Horizontal [
     itemControlsElem <| Atom.view (CartItem.byId inventoryItem.Id) cart
-    Label (Content = inventoryItem.Name)
-    Label (Content = inventoryItem.Price)
+    UI.elem Label [UI.content inventoryItem.Name]
+    UI.elem Label [UI.content inventoryItem.Price]
   ]
 
 let inventoryElem cart inventory =
   stackElems Orientation.Vertical [
-    Label (Content = "Inventory")
+    UI.elem Label [UI.content "Inventory"]
     inventory
      |> Map.toArray
      |> Array.map (snd >> inventoryItemElem cart)
@@ -95,16 +90,16 @@ let main _ =
 
   UI.run <| Application (
     MainWindow = UI.show (
-      Window (
-        Title = "Shopping Cart",
-        Width = 400.0,
-        Height = 300.0,
-        Content = (
+      UI.window Window [
+        UI.title "Shopping Cart"
+        UI.width 400.0
+        UI.height 300.0
+        UI.content (
           stackElems Orientation.Horizontal [
             inventoryElem cart inventory
             cartElem inventory cart
           ]
         )
-      )
+      ]
     )
   )

@@ -13,48 +13,53 @@ module Contact =
   let phone = Optic.lens (fun t -> t.Phone) (fun v t -> {t with Phone = v})
   let empty = {Name = ""; Phone = ""}
 
-let textBox text = TextBox (Width = 100.0) |> UI.bind [ UI.text text ]
+let textBox (text: IAtom<_>) = UI.elem TextBox [UI.width 100.0; UI.text text]
 
 let contactView contact =
-  StackPanel (Orientation = Orientation.Horizontal) |> UI.bind [
+  UI.elem StackPanel [
+    UI.orientation Orientation.Horizontal
     UI.children [
-      Button (Content = "Remove") |> UI.bind [
-        UI.onClick <| Atom.removeAct contact
-      ]
+      UI.elem Button [UI.content "Remove"; UI.onClick <| Atom.removeAct contact]
       Atom.view Contact.name contact |> textBox
       Atom.view Contact.phone contact |> textBox
     ]
   ]
 
 let contactsView contacts =
-  StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
+  UI.elem StackPanel [
+    UI.orientation Orientation.Vertical
     UI.children [
-      StackPanel (Orientation = Orientation.Horizontal) |> UI.bind [
+      UI.elem StackPanel [
+        UI.orientation Orientation.Horizontal
         UI.children [
-          Button (Content = "Add") |> UI.bind [
+          UI.elem Button [
+            UI.content "Add"
             UI.onClick <| Atom.setAtAct Optic.appendL contacts [Contact.empty]
           ]
         ]
       ]
-      StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
+      UI.elem StackPanel [
+        UI.orientation Orientation.Vertical
         Atom.map contactView contacts |> UI.children
       ]
     ]
   ]
 
 let countDownButton label value =
-  Button () |> UI.bind [
+  UI.elem Button [
     UI.onClick <| Atom.modifyAct value ((+) -1)
-    UI.isEnabled (UI.lift1 ((<>) 0) value)
-    UI.content (UI.lift1 (sprintf"%s (%d)" label) value)
+    UI.isEnabled <| UI.lift1 ((<>) 0) value
+    UI.lift1 (sprintf"%s (%d)" label) value |> UI.content
   ]
 
 let historyView history =
-  DockPanel () |> UI.bind [
+  UI.elem DockPanel [
     UI.children [
       countDownButton "Undo" <| Atom.view History.undoIndex history
       countDownButton "Redo" <| Atom.view History.redoIndex history
-      Slider (Minimum = 0.0, SmallChange = 1.0) |> UI.bind [
+      UI.elem Slider [
+        UI.smallChange 1.0
+        UI.minimum 0.0
         UI.maximum (UI.lift1 (History.indexMax >> float) history)
         UI.value <| Atom.view (History.index << Optic.truncateI) history
       ]
@@ -70,18 +75,19 @@ let main _ =
 
   UI.run <| Application (
     MainWindow = UI.show (
-      Window (
-        Title = "Contacts",
-        Width = 300.0,
-        Height = 300.0,
-        Content = (
-          StackPanel (Orientation = Orientation.Vertical) |> UI.bind [
+      UI.window Window [
+        UI.title "Contacts"
+        UI.width 300.0
+        UI.height 300.0
+        UI.content (
+          UI.elem StackPanel [
+            UI.orientation Orientation.Vertical
             UI.children [
               historyView state
               contactsView (Atom.view History.present state)
             ]
           ]
         )
-      )
+      ]
     )
   )
