@@ -20,6 +20,12 @@ let counterElem count =
 let removableElem removable =
   UI.elem Button [UI.content "🗑️"; UI.onClick (Atom.removeAct removable)]
 
+let removableCounterElem count =
+  stackElems Orientation.Horizontal [
+    removableElem count
+    counterElem count
+  ]
+
 type CartItem = {Id: int; Count: int}
 module CartItem =
   let id t = t.Id
@@ -30,16 +36,10 @@ module CartItem =
 
 type InventoryItem = {Id: int; Name: string; Price: float}
 
-let itemControlsElem cartItem =
-  stackElems Orientation.Horizontal [
-    removableElem cartItem
-    counterElem <| Atom.view CartItem.count cartItem
-  ]
-
 let cartItemElem inventory id cartItem =
   let inventoryItem = Map.find id inventory
   stackElems Orientation.Horizontal [
-    itemControlsElem cartItem
+    removableCounterElem <| Atom.view CartItem.count cartItem
     UI.elem Label [UI.content inventoryItem.Name]
   ]
 
@@ -63,7 +63,8 @@ let cartElem inventory cart =
 
 let inventoryItemElem cart (inventoryItem: InventoryItem) =
   stackElems Orientation.Horizontal [
-    itemControlsElem <| Atom.view (CartItem.byId inventoryItem.Id) cart
+    removableCounterElem
+     <| Atom.view (CartItem.byId inventoryItem.Id << CartItem.count) cart
     UI.elem Label [UI.content inventoryItem.Name]
     UI.elem Label [UI.content inventoryItem.Price]
   ]
