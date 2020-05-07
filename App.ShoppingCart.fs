@@ -8,17 +8,29 @@ open System.Windows
 open System.Windows.Controls
 
 let stackElems orientation (children: IROL<_>) =
-  UI.elem StackPanel [UI.orientation orientation; UI.children children]
+  UI.elem StackPanel [
+    UI.orientation orientation
+    UI.children children
+  ]
 
 let counterElem count =
   stackElems Orientation.Horizontal [
-    UI.elem Button [UI.content "-"; UI.onClick <| Atom.modifyAct count ((+) -1)]
+    UI.elem Button [
+      UI.content "-"
+      UI.onClick (Atom.modifyAct count ((+) -1))
+    ]
     UI.elem Label [UI.content (UI.lift1 string count)]
-    UI.elem Button [UI.content "+"; UI.onClick <| Atom.modifyAct count ((+) +1)]
+    UI.elem Button [
+      UI.content "+"
+      UI.onClick (Atom.modifyAct count ((+) +1))
+    ]
   ]
 
 let removableElem removable =
-  UI.elem Button [UI.content "🗑️"; UI.onClick (Atom.removeAct removable)]
+  UI.elem Button [
+    UI.content "🗑️"
+    UI.onClick (Atom.removeAct removable)
+  ]
 
 let removableCounterElem count =
   stackElems Orientation.Horizontal [
@@ -32,14 +44,15 @@ module CartItem =
   let count =
     Optic.lens (fun t -> t.Count) (fun v t -> {t with Count = v})
     << Optic.removeEqL 0 << Optic.rewriteI (max 0)
-  let byId Id = Optic.findL (id >> (=) Id) << Optic.defaultsI {Id=Id; Count=0}
+  let byId Id =
+    Optic.findL (id >> (=) Id) << Optic.defaultsI {Id=Id; Count=0}
 
 type InventoryItem = {Id: int; Name: string; Price: float}
 
 let cartItemElem inventory id cartItem =
   let inventoryItem = Map.find id inventory
   stackElems Orientation.Horizontal [
-    removableCounterElem <| Atom.view CartItem.count cartItem
+    removableCounterElem (Atom.view CartItem.count cartItem)
     UI.elem Label [UI.content inventoryItem.Name]
   ]
 
@@ -47,9 +60,10 @@ let cartElem inventory cart =
   let total =
     cart
      |> UI.lift1 (
-          Seq.sumBy (fun (item: CartItem) ->
+          Seq.sumBy <| fun (item: CartItem) ->
             let info = Map.find item.Id inventory
-            info.Price * float item.Count))
+            info.Price * float item.Count
+        )
   stackElems Orientation.Vertical [
     UI.elem Label [UI.content "Shopping Cart"]
     UI.elem StackPanel [
@@ -58,13 +72,17 @@ let cartElem inventory cart =
        |> Atom.mapByKey CartItem.id (cartItemElem inventory)
        |> UI.children
     ]
-    UI.elem Label [UI.content (UI.lift1 (sprintf "Total: %.2f") total)]
+    UI.elem Label [
+      UI.content (UI.lift1 (sprintf "Total: %.2f") total)
+    ]
   ]
 
 let inventoryItemElem cart (inventoryItem: InventoryItem) =
   stackElems Orientation.Horizontal [
     removableCounterElem
-     <| Atom.view (CartItem.byId inventoryItem.Id << CartItem.count) cart
+     <| Atom.view
+          (CartItem.byId inventoryItem.Id << CartItem.count)
+          cart
     UI.elem Label [UI.content inventoryItem.Name]
     UI.elem Label [UI.content inventoryItem.Price]
   ]
@@ -81,14 +99,15 @@ let inventoryElem cart inventory =
 [<EntryPoint; STAThread>]
 let main _ =
   let cart = Atom.create<IROL<_>> [||]
-  let inventory = Map.ofArray << Array.map (fun t -> (t.Id, t)) <| [|
-    {Id = 1; Price = 1.0; Name = "Toilet paper"}
-    {Id = 2; Price = 2.5; Name = "Bread"}
-    {Id = 3; Price = 2.0; Name = "Butter"}
-    {Id = 4; Price = 3.0; Name = "Milk"}
-    {Id = 5; Price = 2.5; Name = "Coffee"}
-    {Id = 6; Price = 1.5; Name = "Cheese"}
-  |]
+  let inventory =
+    Map.ofArray << Array.map (fun t -> (t.Id, t)) <| [|
+      {Id = 1; Price = 1.0; Name = "Toilet paper"}
+      {Id = 2; Price = 2.5; Name = "Bread"}
+      {Id = 3; Price = 2.0; Name = "Butter"}
+      {Id = 4; Price = 3.0; Name = "Milk"}
+      {Id = 5; Price = 2.5; Name = "Coffee"}
+      {Id = 6; Price = 1.5; Name = "Cheese"}
+    |]
 
   UI.run <| Application (
     MainWindow = UI.show (
