@@ -1,6 +1,8 @@
 module NetOptics.Optic
 
+open System
 open System.Collections.Generic
+open System.Net
 
 type [<Struct>] Context =
   val mutable Hit: bool
@@ -173,6 +175,10 @@ let iso forward backward (P (p, inverted)) =
   let b = p.Invoke (&c, if inverted then nil<_> else forward s)
   if c.Over then backward b else nil<_>)
 
+let rereadI fn = iso fn id
+let rewriteI fn = iso id fn
+let normalizeI fn = iso fn fn
+
 let prism (gt: 'G -> 'T) (stf: 'S -> Choice<'T, 'F>) (P (p, _)) =
   O<|D(fun c s ->
     match stf s with
@@ -248,14 +254,25 @@ let atP ix: t<#IROL<_>, _, _, _> =
 let atRefP ix: t<#IROL<_>, _, _, _> =
   fun (P (p, _)) -> O<|D(fun c xs -> at !ix p &c xs)
 
-let someP (P (p, _)) = O<|D(fun c so ->
-  match so with
-  | None -> None
-  | Some s ->
-    let s = p.Invoke (&c, s)
-    if c.Over then
-      if c.Hit then c.Hit <- false; None else Some s
+let optionP p = ifElse Option.isNone removeP (rereadI Option.get << idI) p
+
+let removeAsNoneL: t<_, _, _, _> = fun (P (p, _)) ->
+  O<|D(fun c x ->
+    let y = p.Invoke (&c, x)
+    if c.Over
+    then if c.Hit then c.Hit <- false; None else Some y
     else nil<_>)
+
+let noneAsRemoveL: t<_, _, _, _> = fun (P (p, _)) ->
+  O<|D(fun c x ->
+    let yO = p.Invoke (&c, x)
+    if c.Over
+    then match yO with
+         | None -> c.Hit <- true; nil<_>
+         | Some y -> y
+    else nil<_>)
+
+let someP p = removeAsNoneL << optionP <| p
 
 let choice1of2P: t<_, _, _, _> = fun p ->
   prism Choice1Of2
@@ -268,40 +285,20 @@ let choice2of2P: t<_, _, _, _> = fun p ->
              | Choice2Of2 x -> Choice2Of2 x
    <| p
 
-let findL predicate: t<#IROL<_>, _, _, _> = fun (P (p, _)) ->
-  O<|D(fun c xs ->
-    match Seq.tryFindIndex predicate xs with
-    | None ->
-      let yO = p.Invoke (&c, None)
-      if c.Over
-      then match yO with
-           | _ when c.Hit -> c.Hit <- false; xs :> IROL<_>
-           | None -> xs :> IROL<_>
-           | Some y -> append (asArray xs, [|y|]) :> IROL<_>
-      else nil<_>
-    | Some i ->
-      let yO = p.Invoke (&c, Some xs.[i])
-      if c.Over
-      then match yO with
-           | _ when c.Hit -> c.Hit <- false; removeAt i xs
-           | None -> removeAt i xs
-           | Some y -> setAt i y xs
-      else nil<_>)
-
-let findP predicate = findL predicate << someP
+let oneAsSomeI p =
+  iso <| fun (xs: #IROL<_>) -> if xs.Count = 1 then Some xs.[0] else None
+      <| function None -> [||] :> IROL<_> | Some x -> [|x|] :> IROL<_>
+      <| p
 
 let isOrI falsy truthy =
   iso <| (=) truthy <| function false -> falsy | true -> truthy
 
-let defaultsI value =
-  iso <| Option.defaultValue value
-      <| fun v -> if v = value then None else Some v
+let toDefault value = Option.defaultValue value
+let ofDefault value v = if v = value then None else Some v
 
-let containsL value = findL ((=) value) << isOrI None (Some value)
-
-let rereadI fn = iso fn id
-let rewriteI fn = iso id fn
-let normalizeI fn = iso fn fn
+let toDefaultI value = rereadI (toDefault value)
+let ofDefaultI value = rewriteI (ofDefault value)
+let defaultI value = iso (toDefault value) (ofDefault value)
 
 let arrayI: t<#IROL<_>, _[], _[], _> = fun p -> iso asArray asList p
 let rolistI: t<_[], _, #IROL<_>, _[]> = fun p -> iso asList asArray p
@@ -312,10 +309,10 @@ let pairI i1 i2 = iso (pair (view i1) (view i2)) (pair (review i1) (review i2))
 let inline private rev xs = xs |> asArray |> Array.rev |> asList
 let revI: t<#IROL<_>, _, #IROL<_>, _> = fun p -> iso rev rev p
 
-let splitI sep =
+let splitI (sep: string) =
   let seps = [|sep|]
-  iso (fun (s: string) -> s.Split seps |> asList)
-      (String.concat <| string sep: #IROL<_> -> _)
+  iso (fun (s: string) -> s.Split(seps, StringSplitOptions.None) |> asList)
+      (String.concat sep: #IROL<_> -> _)
 
 let partitionI predicate: t<#IROL<_>, _, #IROL<_> * #IROL<_>, _> =
   arrayI << iso (Array.partition predicate) append << pairI rolistI rolistI
@@ -335,6 +332,17 @@ let splitAtI i: t<#IROL<_>, _, #IROL<_> * #IROL<_>, _> =
   arrayI << iso (splitAt i) append << pairI rolistI rolistI
 let prependL: t<#IROL<_>, _, #IROL<_>, _> = fun p -> splitAtI 0 << fstL <| p
 let appendL: t<#IROL<_>, _, #IROL<_>, _> = fun p -> splitAtI -1 << sndL <| p
+
+let findL predicate =
+  choose <| fun xs ->
+    match Seq.tryFindIndex predicate xs with
+    | Some i -> atP i << rereadI Some
+    | None -> appendL << oneAsSomeI << removeAsNoneL
+
+let findP predicate = findL predicate << optionP
+
+let containsL value =
+  findL ((=) value) << noneAsRemoveL << isOrI None (Some value)
 
 let andAlso (second: t<_, _, _, _>) (first: t<_, _, _, _>) (p: Pipe<_, _>) =
   let (P (p1, _)) = first p
@@ -361,3 +369,59 @@ let indexedI: t<#IROL<_>, _, #IROL<int * _>, _> = fun p ->
    <| p
 
 let truncateI = iso float int<float>
+
+let optionI total =
+  iso <| Option.map (view total)
+      <| Option.map (review total)
+
+let private dropPrefix (prefix: string) (string: string) =
+  if string.StartsWith prefix
+  then Some (string.Substring prefix.Length)
+  else None
+
+let dropPrefixI (prefix: string) = iso <| dropPrefix prefix <| (+) prefix
+
+let private replace (inn: string) (out: string) (s: string) = s.Replace (inn, out)
+let replaceI inn out = iso (replace inn out) (replace out inn)
+
+let subsetI predicate =
+  rereadI (fun inn -> if predicate inn then Some inn else None)
+
+let uncoupleI (sep: string) =
+  iso <| fun (s: string) ->
+           match s.IndexOf sep with
+           | -1 -> (s, "")
+           | i -> (s.Substring (0, i), s.Substring (i + sep.Length))
+      <| fun (l: string, r: string) ->
+           if r = "" then l else (l + sep + r)
+
+let urlDecodeI = iso WebUtility.UrlDecode WebUtility.UrlEncode
+let urlEncodeI = iso WebUtility.UrlEncode WebUtility.UrlDecode
+
+let private ofMultiMap m =
+  Map.toArray m
+   |> Array.map (fun (k, vs) -> vs |> asArray |> Array.map (fun v -> (k, v)))
+   |> Array.concat
+   |> asList
+let private toMultiMap kvs =
+  asArray kvs
+   |> Array.groupBy fst
+   |> Array.map (fun (k, kvs) -> (k, Array.map snd kvs |> asList))
+   |> Map.ofArray
+
+let toMultiMapI: t<#IROL<_>, _, _, _> = fun p -> iso toMultiMap ofMultiMap p
+let ofMultiMapI: t<_, _, #IROL<_>, _> = fun p -> iso ofMultiMap toMultiMap p
+
+let orI secondary primary =
+  iso <| fun x ->
+           match view primary x with
+           | Some y -> y
+           | None -> view secondary x
+      <| review primary
+
+let querystringI =
+  dropPrefixI "?" |> orI idI
+   << replaceI "+" "%20"
+   << splitI "&"
+   << elemsI (uncoupleI "=" << pairI urlDecodeI urlDecodeI)
+   << toMultiMapI

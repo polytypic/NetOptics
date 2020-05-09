@@ -1,5 +1,7 @@
 module NetOptics.Test
 
+open NetOptics
+
 type Node<'k, 'v> =
   { key: 'k
     value: 'v
@@ -89,9 +91,9 @@ let [<EntryPoint>] main _ =
    <| upcast [|3; 2; 1|]
   testEq
    <| Optic.review
-        (Optic.splitI '-'
+        (Optic.splitI "-"
          << Optic.revI
-         << Optic.invertI (Optic.splitI '-'))
+         << Optic.invertI (Optic.splitI "-"))
         "this-it-is"
    <| "is-it-this"
   testEq <| Optic.view (Optic.containsL 4) [|3; 1|] <| false
@@ -106,6 +108,14 @@ let [<EntryPoint>] main _ =
         |> History.undoForget
         |> Optic.view History.present)
    <| 2
+  testEq
+   <| Optic.view Optic.querystringI
+        "message=hello&message=world"
+   <| Map.ofArray [|("message", [|"hello"; "world"|] :> IROL<_>)|]
+  testEq
+   <| Optic.review Optic.querystringI
+        (Map.ofArray [|("message", [|"hello"; "world"|] :> IROL<_>)|])
+   <| "?message=hello&message=world"
   if failed <> 0
   then printfn "%d PASSED, %d FAILED" passed failed; 1
   else printfn "%d PASSED" passed; 0

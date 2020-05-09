@@ -125,10 +125,24 @@ val removeIfL: predicate: ('G -> bool) -> t<'F, 'F, 'G, 'G>
 /// A lens like optic that signals removal when written with equal value.
 val removeEqL: value: 'G -> t<'F, 'F, 'G, 'G> when 'G: equality
 
-val defaultsI: value: 'F -> t<option<'F>, 'F, 'F, option<'F>> when 'F: equality
+/// A prism that peels away `Some` and removes `None`.
+val optionP: t<option<'F>, 'F, 'G, 'G>
+
+/// A lens like optic that maps a removed focus to `None` when written.
+val removeAsNoneL: t<'F, 'F, 'G, option<'G>>
+/// A lens like optic that maps `None` to a removed focus when written.
+val noneAsRemoveL: t<'F, 'F, option<'G>, 'G>
 
 /// A prism that focuses on `Some` value of optional if any. Removable.
 val someP: t<option<'F>, 'F, 'G, option<'G>>
+
+/// An isomorphism between options.
+val optionI: t<       'S ,        'F ,        'G ,        'T >
+          -> t<option<'S>, option<'F>, option<'G>, option<'T>>
+
+val toDefaultI: value: 'F -> t<option<'F>, 'F, 'G, 'G> when 'F: equality
+val ofDefaultI: value: 'G -> t<'F, 'F, 'G, option<'G>> when 'G: equality
+val defaultI: value: 'F -> t<option<'F>, 'F, 'F, option<'F>> when 'F: equality
 
 /// A prism that focuses on `Choice1Of2`.
 val choice1of2P: t<Choice<'F, 'S>, 'F, 'G, Choice<'G, 'S>>
@@ -175,9 +189,9 @@ val atP:    index:        int  -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
 val atRefP: indexRef: ref<int> -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
 
 /// A lens like optic focusing on an element that matches the given predicate.
-val findL: ('F -> bool) -> t<#IROL<'F>, option<'F>, option<'F>, IROL<'F>>
+val findL: ('F -> bool) -> t<#IROL<'F>, option<'F>, 'F, IROL<'F>>
 
-/// A prism focusing on an element that matches the given prodicate.
+/// A prism focusing on an element that matches the given predicate.
 val findP: ('F -> bool) -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
 
 /// An isomorphism between given values and booleans.  Only truthy maps to true.
@@ -193,11 +207,13 @@ val elemsI: t<'S, 'F, 'G, 'T> -> t<#IROL<'S>, IROL<'F>, #IROL<'G>, IROL<'T>>
 
 /// An isomorphism that partitions a list into sublists of passes and fails.
 val partitionI: predicate: ('F -> bool)
-             -> t<#IROL<'F>, IROL<'F> * IROL<'F>, #IROL<'G> * #IROL<'G>, IROL<'G>>
+          -> t<#IROL<'F>, IROL<'F> * IROL<'F>, #IROL<'G> * #IROL<'G>, IROL<'G>>
 /// A lens that focuses on sublist of passes.
-val filterL: predicate: ('F -> bool) -> t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
+val filterL: predicate: ('F -> bool)
+          -> t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
 /// A lens that focuses on sublist of fails.
-val rejectL: predicate: ('F -> bool) -> t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
+val rejectL: predicate: ('F -> bool)
+          -> t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
 
 /// An isomorphism that splits a list into two sublists at given position.
 val splitAtI: relative: int
@@ -214,4 +230,39 @@ val revI: t<#IROL<'F>, IROL<'F>, #IROL<'G>, IROL<'G>>
 val indexedI: t<#IROL<'F>, IROL<int * 'F>, #IROL<int * 'G>, IROL<'G>>
 
 /// An isomorphism between string with separators and the separated strings.
-val splitI: separator: char -> t<string, IROL<string>, #IROL<string>, string>
+val splitI: separator: string -> t<string, IROL<string>, #IROL<string>, string>
+
+/// An isomorphism between strings with and without a prefix.
+val dropPrefixI: prefix: string -> t<string, option<string>, string, string>
+
+/// An isomorphism between strings with substrings replaced.
+val replaceI: inn: string -> out: string -> t<string, string, string, string>
+
+/// An isomorphism between values and values that pass the predicate.
+val subsetI: predicate: ('S -> bool) -> t<'S, option<'S>, 'T, 'T>
+
+/// An isomorphism between strings with an optional separator and pairs.
+val uncoupleI: separator: string
+            -> t<string, string * string, string * string, string>
+
+/// An isomorphism between URL encoded and plain strings.
+val urlDecodeI: t<string, string, string, string>
+/// An isomorphism between plain and URL encoded strings.
+val urlEncodeI: t<string, string, string, string>
+
+/// An isomorphism between list of key-value pairs and map of keys to values.
+val toMultiMapI: t<#IROL<'FK * 'FV>,
+                   Map<'FK, IROL<'FV>>,
+                   Map<'GK, #IROL<'GV>>,
+                   IROL<'GK * 'GV>> when 'FK: comparison and 'GK: comparison
+/// An isomorphism between map of keys to values and list of key-value pairs.
+val ofMultiMapI: t<Map<'FK, #IROL<'FV>>,
+                   IROL<'FK * 'FV>,
+                   #IROL<'GK * 'GV>,
+                   Map<'GK, IROL<'GV>>> when 'FK: comparison and 'GK: comparison
+
+/// An isomorphism between querystrings and maps of keys to values.
+val querystringI: t<string,
+                    Map<string, IROL<string>>,
+                    Map<string, IROL<string>>,
+                    string>

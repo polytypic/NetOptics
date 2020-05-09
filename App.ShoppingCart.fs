@@ -45,7 +45,7 @@ module CartItem =
     Optic.lens (fun t -> t.Count) (fun v t -> {t with Count = v})
     << Optic.removeEqL 0 << Optic.rewriteI (max 0)
   let byId Id =
-    Optic.findL (id >> (=) Id) << Optic.defaultsI {Id=Id; Count=0}
+    Optic.findL (id >> (=) Id) << Optic.toDefaultI {Id=Id; Count=0}
 
 type InventoryItem = {Id: int; Name: string; Price: float}
 
