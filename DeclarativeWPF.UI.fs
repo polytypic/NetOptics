@@ -9,6 +9,7 @@ open System.Windows.Controls.Primitives
 open System.Windows.Input
 open System.Reactive.Linq
 open System.Runtime.CompilerServices
+open System.Collections.Generic
 
 type UI<'T> = Pure of (unit -> 'T)
 
@@ -16,6 +17,42 @@ type ExtAttribute = ExtensionAttribute
 
 module UI =
   let isVisibleProperties = ConditionalWeakTable<UIElement, IObs<bool>>()
+
+  let instantiate (Pure ui) = ui ()
+
+  let physicalEqualityComparer<'T when 'T : not struct> =
+    {new IEqualityComparer<'T> with
+      member t.GetHashCode x = LanguagePrimitives.PhysicalHash x
+      member t.Equals (lhs, rhs) = LanguagePrimitives.PhysicalEquality lhs rhs}
+
+  let childrenWithCache (c: UIElementCollection) =
+    let cache = Dictionary<_, _>(physicalEqualityComparer)
+    fun (pes: #IROL<UI<UIElement>>) ->
+      c.Clear () // TODO: More incremental update of children
+      let counts = Dictionary<_, _>(cache.Count, physicalEqualityComparer)
+      for pe in pes do
+        let mutable count = 0
+        counts.TryGetValue (pe, &count) |> ignore
+        let mutable elems = Unchecked.defaultof<_>
+        if not (cache.TryGetValue (pe, &elems)) then
+          elems <- ResizeArray<_>(1)
+          cache.Add (pe, elems)
+        let elem =
+          if elems.Count <= count then
+            elems.Add (instantiate pe)
+          elems.[count]
+        counts.[pe] <- count + 1
+        c.Add elem |> ignore
+      let toRemove = ResizeArray<_>(cache.Count)
+      for kv in cache do
+        let mutable count = 0
+        counts.TryGetValue (kv.Key, &count) |> ignore
+        if count = 0 then
+          toRemove.Add kv.Key
+        elif count < kv.Value.Count then
+          kv.Value.RemoveRange (count, kv.Value.Count - count)
+      for k in toRemove do
+        cache.Remove k |> ignore
 
 type [<Extension; Sealed>] UI =
   [<Ext>] static member AsProperty (o: IObs<_>) =
@@ -57,8 +94,6 @@ type [<Extension; Sealed>] UI =
     fun (bindings: #IROL<'E -> unit>) ->
       UI.wrap (fun x -> x :> Window) constructor bindings
 
-  static member instantiate (Pure ui) = ui ()
-
   static member subscribeVisible (c: #UIElement)
                                  (o: IObs<'x>)
                                  (action: 'x -> unit) =
@@ -79,20 +114,20 @@ type [<Extension; Sealed>] UI =
     UI.subscribeVisible c v <| fun v ->
       if get () <> v then setting <- true; set v
 
-  static member children (es: #IROL<UI<UIElement>>) = fun (c: #Panel) ->
+  static member children (pes: #IROL<UI<UIElement>>) = fun (c: #Panel) ->
     let c = c.Children
     c.Clear ()
-    for e in es do
-      c.Add (UI.instantiate e) |> ignore
+    for pe in pes do
+      c.Add (UI.instantiate pe) |> ignore
 
-  static member children (es: IObs<IROL<UI<UIElement>>>) =
-    fun (c: #Panel) -> UI.subscribeVisible c es <| fun es -> UI.children es c
+  static member children (pes: IObs<IROL<UI<UIElement>>>) = fun (c: #Panel) ->
+    UI.subscribeVisible c pes <| UI.childrenWithCache c.Children
 
-  static member children (es: IObs<UI<UIElement>[]>) = fun (c: #Panel) ->
-    UI.subscribeVisible c es <| fun es -> UI.children es c
+  static member children (pes: IObs<UI<UIElement>[]>) = fun (c: #Panel) ->
+    UI.subscribeVisible c pes <| UI.childrenWithCache c.Children
 
-  static member children (es: IObs<list<UI<UIElement>>>) = fun (c: #Panel) ->
-    UI.subscribeVisible c es <| fun es -> UI.children es c
+  static member children (pes: IObs<list<UI<UIElement>>>) = fun (c: #Panel) ->
+    UI.subscribeVisible c pes <| UI.childrenWithCache c.Children
 
   static member orientation v = fun (c: #StackPanel) -> c.Orientation <- v
 
@@ -106,11 +141,11 @@ type [<Extension; Sealed>] UI =
   static member content (o: IObs<#obj>) = fun (c: #ContentControl) ->
     UI.subscribeVisible c o <| fun v -> c.Content <- v
 
-  static member content (Pure v: UI<UIElement>) = fun (c: #ContentControl) ->
-    c.Content <- v ()
+  static member content (pe: UI<UIElement>) = fun (c: #ContentControl) ->
+    c.Content <- UI.instantiate pe
 
   static member content (o: IObs<UI<UIElement>>) = fun (c: #ContentControl) ->
-    UI.subscribeVisible c o <| fun (Pure v) -> c.Content <- v ()
+    UI.subscribeVisible c o <| fun pe -> c.Content <- UI.instantiate pe
 
   static member isEnabled (o: IObs<bool>) = fun (c: #UIElement) ->
     UI.subscribeVisible c o <| fun v -> c.IsEnabled <- v
@@ -170,8 +205,8 @@ type [<Extension; Sealed>] UI =
 
   static member dock d = fun (c: #UIElement) -> DockPanel.SetDock(c, d)
 
-  static member show (Pure w: UI<Window>) =
-    let w = w()
+  static member show (pw: UI<Window>) =
+    let w = UI.instantiate pw
     w.Show ()
     w
 
