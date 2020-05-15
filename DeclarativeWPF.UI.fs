@@ -25,34 +25,94 @@ module UI =
       member t.GetHashCode x = LanguagePrimitives.PhysicalHash x
       member t.Equals (lhs, rhs) = LanguagePrimitives.PhysicalEquality lhs rhs}
 
-  let childrenWithCache (c: UIElementCollection) =
-    let cache = Dictionary<_, _>(physicalEqualityComparer)
+  let inline push (xs: byref<list<_>>) x =
+    xs <- x::xs
+
+  let inline inc (i: byref<_>) = i <- i + 1
+
+  type Edit = Keep | Remove | Insert
+  type [<Struct>] Pos = {X: int; Y: int}
+  type [<Struct>] Entry = {P: Pos; Es: list<Edit>}
+
+  let edits eq (xs: _[]) (ys: _[]) =
+    let nX = xs.Length
+    let nY = ys.Length
+    let mutable maxCost = nX + nY + 1
+    let byPos = Dictionary<_, _>(  )
+    let byCost = Array.create maxCost []
+    let push newCost pos edit edits =
+      let mutable oldCost = Unchecked.defaultof<_>
+      if byPos.TryGetValue (pos, &oldCost) then
+        if newCost < oldCost then
+          byPos.[pos] <- newCost
+          push &byCost.[newCost] {P=pos; Es=edit::edits}
+      else
+         byPos.Add (pos, newCost)
+         push &byCost.[newCost] {P=pos; Es=edit::edits}
+    let enqueue predCost p es =
+      if p.X < nX && p.Y < nY && eq xs.[p.X] ys.[p.Y] then
+        push predCost {X=p.X+1; Y=p.Y+1} Keep es
+      elif predCost + 1 < maxCost then
+        if p.Y < nY then
+          push (predCost + 1) {X=p.X; Y=p.Y+1} Insert es
+        if p.X < nX then
+          push (predCost + 1) {X=p.X+1; Y=p.Y} Remove es
+    enqueue 0 {X=0; Y=0} []
+    let mutable i = 0
+    let mutable found = []
+    while i < maxCost do
+      match byCost.[i] with
+      | e :: es ->
+        byCost.[i] <- es
+        if e.P.X < nX || e.P.Y < nY
+        then enqueue i e.P e.Es
+        else found <- e.Es; i <- maxCost
+      | [] -> inc &i
+    List.rev found
+
+  let private toArray (xs: IROL<_>) =
+    let n = xs.Count
+    let ys = Array.zeroCreate n
+    let mutable i = 0
+    use e = xs.GetEnumerator ()
+    while e.MoveNext () do
+      ys.[i] <- e.Current
+      inc &i
+    ys
+
+  let inline private asArray (xs: IROL<_>) =
+    match xs with
+    | :? array<_> as xs -> xs
+    | _ -> toArray xs
+
+  let childrenWithCachedEdits (c: UIElementCollection) =
+    let mutable prev = [||]
     fun (pes: #IROL<UI<UIElement>>) ->
-      c.Clear () // TODO: More incremental update of children
-      let counts = Dictionary<_, _>(cache.Count, physicalEqualityComparer)
-      for pe in pes do
-        let mutable count = 0
-        counts.TryGetValue (pe, &count) |> ignore
-        let mutable elems = Unchecked.defaultof<_>
-        if not (cache.TryGetValue (pe, &elems)) then
-          elems <- ResizeArray<_>(1)
-          cache.Add (pe, elems)
-        let elem =
-          if elems.Count <= count then
-            elems.Add (instantiate pe)
-          elems.[count]
-        counts.[pe] <- count + 1
-        c.Add elem |> ignore
-      let toRemove = ResizeArray<_>(cache.Count)
-      for kv in cache do
-        let mutable count = 0
-        counts.TryGetValue (kv.Key, &count) |> ignore
-        if count = 0 then
-          toRemove.Add kv.Key
-        elif count < kv.Value.Count then
-          kv.Value.RemoveRange (count, kv.Value.Count - count)
-      for k in toRemove do
-        cache.Remove k |> ignore
+      let next = asArray pes
+      let changes = edits LanguagePrimitives.PhysicalEquality prev next
+      let cache = Dictionary<_, _>(physicalEqualityComparer)
+      do let mutable iP = 0
+         for change in changes do
+           match change with
+           | Keep -> inc &iP
+           | Remove ->
+             cache.[prev.[iP]] <- c.[iP]
+             c.RemoveAt iP
+           | Insert -> ()
+      do let mutable iP = 0
+         let mutable iN = 0
+         for change in changes do
+           match change with
+           | Keep -> inc &iP; inc &iN
+           | Remove -> ()
+           | Insert ->
+             let mutable e = Unchecked.defaultof<_>
+             let pe = next.[iN]
+             if cache.TryGetValue (pe, &e)
+             then cache.Remove pe |> ignore
+             else e <- instantiate pe
+             c.Insert (iP, e); inc &iP; inc &iN
+      prev <- next
 
 type [<Extension; Sealed>] UI =
   [<Ext>] static member AsProperty (o: IObs<_>) =
@@ -121,13 +181,13 @@ type [<Extension; Sealed>] UI =
       c.Add (UI.instantiate pe) |> ignore
 
   static member children (pes: IObs<IROL<UI<UIElement>>>) = fun (c: #Panel) ->
-    UI.subscribeVisible c pes <| UI.childrenWithCache c.Children
+    UI.subscribeVisible c pes <| UI.childrenWithCachedEdits c.Children
 
   static member children (pes: IObs<UI<UIElement>[]>) = fun (c: #Panel) ->
-    UI.subscribeVisible c pes <| UI.childrenWithCache c.Children
+    UI.subscribeVisible c pes <| UI.childrenWithCachedEdits c.Children
 
   static member children (pes: IObs<list<UI<UIElement>>>) = fun (c: #Panel) ->
-    UI.subscribeVisible c pes <| UI.childrenWithCache c.Children
+    UI.subscribeVisible c pes <| UI.childrenWithCachedEdits c.Children
 
   static member orientation v = fun (c: #StackPanel) -> c.Orientation <- v
 
