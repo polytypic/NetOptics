@@ -79,8 +79,7 @@ let review (anIso: t<_, _, 'G, _>) =
   let (P (p, inverted)) = I true <|D(fun c _ -> unbox<'G> c.View)|>anIso
   if not inverted then failwith "review"
   fun (f: 'G) ->
-    let mutable c = Context (View = f)
-    c.Over <- true
+    let mutable c = Context (Over = true, View = f)
     p.Invoke (&c, nil<_>)
 
 let fold zero plus (o: t<_, _, _, _>) s =
@@ -101,8 +100,7 @@ let iter (o: t<_, _, _, _>) action =
 let inline private overWith (o: t<_, _, _, _>) mapping finish =
   let (P (p, _)) = O<|D(fun _ x -> mapping x)|>o
   fun s ->
-    let mutable c = Context ()
-    c.Over <- true
+    let mutable c = Context (Over = true)
     let r = p.Invoke (&c, s)
     finish c.Hit r s
 
@@ -148,8 +146,7 @@ let disperseKeep (o: t<_, _, _, _>) (values: #IROL<_>) =
     if i < values.Count
     then let x = values.[i] in inc &c.Index; x else x)|>o
   fun s ->
-    let mutable c = Context ()
-    c.Over <- true
+    let mutable c = Context (Over = true)
     let r = p.Invoke (&c, s)
     if c.Hit then failwith "disperseKeep"
     r
@@ -160,8 +157,7 @@ let disperse (o: t<_, _, _, _>) (values: #IROL<_>) =
     then let x = values.[i] in inc &c.Index; x
     else c.Hit <- true; nil<_>)|>o
   fun s ->
-    let mutable c = Context ()
-    c.Over <- true
+    let mutable c = Context (Over = true)
     let r = p.Invoke (&c, s)
     if c.Hit then failwith "disperse"
     r
