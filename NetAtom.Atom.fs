@@ -18,8 +18,10 @@ type [<Sealed>] Atom =
 
   static member view (xyO: Optic<_, _>) = fun (xA: IAtom<_>) ->
     let property =
-      xA.Where(Optic.canView xyO).Select(Optic.view xyO)
-        .DistinctUntilChanged().Replay(1).RefCount()
+      xA
+       |> Stream.filter (Optic.canView xyO)
+       |> Stream.map (Optic.view xyO)
+       |> Stream.toProp
     {new IAtom<'x> with
       member t.Subscribe o = property.Subscribe o
       member t.Modify (optic, fn) = xA.Modify (xyO << optic, fn)}
@@ -28,8 +30,9 @@ type [<Sealed>] Atom =
     let mutable hack = Unchecked.defaultof<_>
     let property =
       xyO.CombineLatest(xA, fun xyO x -> hack <- xyO; Optic.tryView xyO x)
-        .Where(Option.isSome).Select(Option.get)
-        .DistinctUntilChanged().Replay(1).RefCount()
+       |> Stream.filter Option.isSome
+       |> Stream.map Option.get
+       |> Stream.toProp
     {new IAtom<_> with
       member t.Subscribe o = property.Subscribe o
       member t.Modify (optic, fn) = xA.Modify (hack << optic, fn)}
@@ -38,7 +41,7 @@ type [<Sealed>] Atom =
   static member modify xA fn = Atom.modifyAt Optic.idI xA fn
   static member modifyAct xA fn = fun _ -> Atom.modify xA fn
 
-  static member remove (xA: IAtom<_>) = xA.Modify (Optic.removeP, id)
+  static member remove xA = Atom.modifyAt Optic.removeP xA id
   static member removeAct xA = fun _ -> Atom.remove xA
 
   static member setAt o xA x = Atom.modifyAt o xA <| fun _ -> x

@@ -270,6 +270,11 @@ let noneAsRemoveL: t<_, _, _, _> = fun (P (p, _)) ->
     else nil<_>)
 
 let someP p = removeAsNoneL << optionP <| p
+let noneP p =
+  prism <| fun () -> None
+    <| function None -> Choice2Of2 ()
+              | some -> Choice1Of2 some
+    <| p
 
 let choice1of2P: t<_, _, _, _> = fun p ->
   prism Choice1Of2

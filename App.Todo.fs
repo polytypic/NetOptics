@@ -60,9 +60,9 @@ let main _ =
     todos |> Atom.view (Optic.foldLens (Optic.forall id) Todos.completed)
 
   let numLeft =
-    UI.lift1 (Optic.count (Todos.completed << Optic.whereP not)) todos
+    Prop.map (Optic.count (Todos.completed << Optic.whereP not)) todos
 
-  let empty = UI.lift1 (fun (xs: IROL<_>) -> xs.Count = 0) todos
+  let empty = Prop.map (fun (xs: IROL<_>) -> xs.Count = 0) todos
 
   let filterButton value =
     UI.elem Button [
@@ -84,7 +84,7 @@ let main _ =
                 UI.children [
                   UI.elem CheckBox [
                     UI.isChecked allDone
-                    UI.isEnabled <| UI.lift1 not empty
+                    UI.isEnabled <| Prop.map not empty
                   ]
                   UI.elem TextBox [
                     UI.text newTodo
@@ -92,15 +92,15 @@ let main _ =
                       let title = textBox.Text
                       if title <> "" then
                         Atom.modify todos
-                          <| fun todos ->
-                               let id =
-                                 if todos.Count = 0 then 0
-                                 else todos.[todos.Count-1].Id + 1
-                               Optic.set Optic.appendL
-                                 [{Todo.Id = id
-                                   Todo.Completed = false
-                                   Todo.Title = title}]
-                                 todos
+                         <| fun todos ->
+                              let id =
+                                if todos.Count = 0 then 0
+                                else todos.[todos.Count-1].Id + 1
+                              Optic.set Optic.appendL
+                                [{Todo.Id = id
+                                  Todo.Completed = false
+                                  Todo.Title = title}]
+                                todos
                         Atom.set newTodo ""
                   ]
                 ]
@@ -109,13 +109,12 @@ let main _ =
                 UI.orientation Orientation.Vertical
                 todos
                  |> Atom.view
-                      (UI.lift1
-                       <| fun filter ->
-                            Optic.rewriteI
-                              (Optic.over Optic.arrayI
-                                (Array.sortBy (Optic.view Todo.id)))
-                               << Optic.filterL (Filter.predicate filter)
-                       <| filter)
+                      (filter
+                       |> Prop.map (fun filter ->
+                          Optic.rewriteI
+                            (Optic.over Optic.arrayI
+                              (Array.sortBy (Optic.view Todo.id)))
+                              << Optic.filterL (Filter.predicate filter)))
                  |> Atom.mapByKey (Optic.view Todo.id) (fun id todo ->
                     let editing = Atom.view (Optic.isOrI None (Some id)) editing
                     UI.elem DockPanel [
@@ -134,7 +133,7 @@ let main _ =
                           UI.onLostFocus <| Atom.setAct editing false
                           UI.onEnter <| fun _ -> Keyboard.ClearFocus()
                           UI.onMouseDoubleClick <| Atom.setAct editing true
-                          UI.isReadOnly <| UI.lift1 not editing
+                          UI.isReadOnly <| Prop.map not editing
                         ]
                       ]
                     ])
@@ -142,17 +141,19 @@ let main _ =
               ]
               UI.elem StackPanel [
                 UI.orientation Orientation.Horizontal
-                empty.IfElse([], [
-                  UI.elem Label [
-                    UI.lift1 (fun n ->
-                        sprintf "%d item%s left" n (if n = 1 then "" else "s"))
-                      numLeft
-                     |> UI.content
-                  ]
-                  filterButton All
-                  filterButton Active
-                  filterButton Completed
-                ]) |> UI.children
+                empty
+                 |> Prop.ifElse (Prop.value []) (Prop.value [
+                      UI.elem Label [
+                        numLeft
+                         |> Prop.map (fun n ->
+                            sprintf "%d item%s left" n (if n = 1 then "" else "s"))
+                         |> UI.content
+                      ]
+                      filterButton All
+                      filterButton Active
+                      filterButton Completed
+                    ])
+                 |> UI.children
               ]
             ]
           ]

@@ -13,8 +13,6 @@ open System.Collections.Generic
 
 type UI<'T> = Pure of (unit -> 'T)
 
-type ExtAttribute = ExtensionAttribute
-
 module UI =
   let isVisibleProperties = ConditionalWeakTable<UIElement, IObs<bool>>()
 
@@ -55,31 +53,12 @@ module UI =
         cache.Remove k |> ignore
 
 type [<Extension; Sealed>] UI =
-  [<Ext>] static member AsProperty (o: IObs<_>) =
-            o.DistinctUntilChanged().Replay(1).RefCount()
-
-  [<Ext>] static member Cond (cond: IObs<_>, onT: IObs<_>, onF: IObs<_>) =
-            cond.Select(fun c -> if c then onT else onF).Switch()
-
-  [<Ext>] static member IfElse (cond: IObs<_>, onT: IObs<'T>, onF: IObs<'T>) =
-            cond.Cond(onT, onF).AsProperty()
-  [<Ext>] static member IfElse (cond: IObs<_>, onT:      'T , onF: IObs<'T>) =
-            cond.IfElse(Observable.Return(onT), onF)
-  [<Ext>] static member IfElse (cond: IObs<_>, onT: IObs<'T>, onF:      'T ) =
-            cond.IfElse(onT, Observable.Return(onF))
-  [<Ext>] static member IfElse (cond: IObs<_>, onT:      'T , onF:      'T ) =
-            cond.IfElse(Observable.Return(onT), Observable.Return(onF))
-
-  static member lift1 (fn: 'S1 -> 'T) = fun (x1: #IObs<'S1>) ->
-    x1.Select(fn).AsProperty()
-
-  static member lift2 (fn: 'S1 -> 'S2 -> 'T) =
-    fun (x1: #IObs<'S1>) (x2: #IObs<'S2>) ->
-      Observable.CombineLatest(x1, x2, fn).AsProperty()
+  static member observeOnDispatcher (xO: IObs<_>) =
+    xO.ObserveOnDispatcher()
 
   static member isVisible (e: UIElement) =
     UI.isVisibleProperties.GetValue(e, fun e ->
-      e.IsVisibleChanged.Select(fun _ -> e.IsVisible).AsProperty())
+      e.IsVisibleChanged |> Prop.map (fun _ -> e.IsVisible))
 
   static member wrap (cast: 'E -> 'R) (constructor: unit -> 'E) =
     fun (bindings: #IROL<'E -> unit>) -> Pure <| fun () ->
@@ -97,10 +76,11 @@ type [<Extension; Sealed>] UI =
   static member subscribeVisible (c: #UIElement)
                                  (o: IObs<'x>)
                                  (action: 'x -> unit) =
-    (UI.isVisible c)
-      .Cond(o, Observable.Empty<_>())
-      .ObserveOnDispatcher()
-      .Subscribe(action) |> ignore
+    UI.isVisible c
+     |> Stream.ifElse o Stream.empty<_>
+     |> UI.observeOnDispatcher
+     |> Stream.subscribe action
+     |> ignore
 
   static member bindAtom initial
                          (c: #UIElement)
@@ -151,7 +131,7 @@ type [<Extension; Sealed>] UI =
     UI.subscribeVisible c o <| fun v -> c.IsEnabled <- v
 
   static member isChecked v = fun (c: #ToggleButton) ->
-    UI.bindAtom false c (c.Checked.Merge(c.Unchecked)) v
+    UI.bindAtom false c (Stream.merge [|c.Checked; c.Unchecked|]) v
      <| fun _ -> c.IsChecked.Value
      <| fun v -> c.IsChecked <- Nullable<bool> v
 
@@ -160,8 +140,9 @@ type [<Extension; Sealed>] UI =
 
   static member onEnter action = fun (c: #UIElement) ->
     let enter =
-      c.KeyDown.Where(fun e -> e.Key = Key.Enter)
-        .Select(fun e -> e.Handled <- true)
+      c.KeyDown
+       |> Stream.filter (fun e -> e.Key = Key.Enter)
+       |> Stream.map (fun (e: KeyEventArgs) -> e.Handled <- true)
     UI.subscribeVisible c enter <| fun _ -> action c
 
   static member maximum v = fun (c: #RangeBase) -> c.Maximum <- v

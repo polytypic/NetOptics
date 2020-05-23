@@ -48,8 +48,8 @@ let contactsView contacts =
 let countDownButton label value =
   UI.elem Button [
     UI.onClick <| Atom.modifyAct value ((+) -1)
-    UI.isEnabled <| UI.lift1 ((<>) 0) value
-    UI.lift1 (sprintf"%s (%d)" label) value |> UI.content
+    UI.isEnabled <| Prop.map ((<>) 0) value
+    Prop.map (sprintf"%s (%d)" label) value |> UI.content
   ]
 
 let historyView history =
@@ -60,7 +60,7 @@ let historyView history =
       UI.elem Slider [
         UI.smallChange 1.0
         UI.minimum 0.0
-        UI.maximum (UI.lift1 (History.indexMax >> float) history)
+        UI.maximum (Prop.map (History.indexMax >> float) history)
         UI.value <| Atom.view (History.index << Optic.truncateI) history
       ]
     ]

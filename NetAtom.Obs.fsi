@@ -11,7 +11,7 @@ type [<Sealed>] Stream =
 
   static member filter: ('T -> bool) -> (#IObs<'T> -> IObs<'T>)
 
-  static member ifElse: IObs<'T> -> (#IObs<'T> -> #IObs<bool> -> IObs<'T>)
+  static member ifElse: #IObs<'T> -> (#IObs<'T> -> #IObs<bool> -> IObs<'T>)
 
   static member latestWhen: IObs<_> -> (#IObs<'T> -> IObs<'T>)
 
@@ -32,7 +32,7 @@ type [<Sealed>] Stream =
   static member toProp: IObs<'T> -> IObs<'T>
 
 type [<Sealed>] Prop =
-  static member ifElse: IObs<'T> -> (#IObs<'T> -> #IObs<bool> -> IObs<'T>)
+  static member ifElse: #IObs<'T> -> (#IObs<'T> -> #IObs<bool> -> IObs<'T>)
 
   static member map:     ('S -> 'T) -> (#IObs<'S> -> IObs<'T>)
   static member map: IObs<'S -> 'T> -> (#IObs<'S> -> IObs<'T>)

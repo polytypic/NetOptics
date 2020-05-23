@@ -13,7 +13,7 @@ type [<Sealed>] Stream =
   static member filter (pred: _ -> _) = fun (xO: #IObs<_>) ->
     xO.Where pred
 
-  static member ifElse (onT: #IObs<_>) = fun (onF: #IObs<_>) (cond: IObs<_>) ->
+  static member ifElse (onT: #IObs<_>) = fun (onF: #IObs<_>) (cond: #IObs<_>) ->
     cond.Select(fun c -> if c then onT :> IObs<_> else onF :> IObs<_>).Switch()
 
   static member latestWhen (ticks: IObs<_>) = fun (xO: #IObs<_>) ->
@@ -47,7 +47,7 @@ type [<Sealed>] Stream =
 type [<Sealed>] Prop =
   static member value x = Observable.Return x
 
-  static member ifElse (onT: #IObs<_>) = fun (onF: #IObs<_>) (cond: IObs<_>) ->
+  static member ifElse (onT: #IObs<_>) = fun (onF: #IObs<_>) (cond: #IObs<_>) ->
     Stream.ifElse onT onF cond |> Stream.toProp
 
   static member map (xy: _ -> _) = fun (xO: #IObs<_>) ->

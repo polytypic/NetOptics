@@ -19,7 +19,7 @@ let counterElem count =
       UI.content "-"
       UI.onClick (Atom.modifyAct count ((+) -1))
     ]
-    UI.elem Label [UI.content (UI.lift1 string count)]
+    UI.elem Label [UI.content (Prop.map string count)]
     UI.elem Button [
       UI.content "+"
       UI.onClick (Atom.modifyAct count ((+) +1))
@@ -59,7 +59,7 @@ let cartItemElem inventory id cartItem =
 let cartElem inventory cart =
   let total =
     cart
-     |> UI.lift1 (
+     |> Prop.map (
           Seq.sumBy <| fun (item: CartItem) ->
             let info = Map.find item.Id inventory
             info.Price * float item.Count
@@ -73,7 +73,7 @@ let cartElem inventory cart =
        |> UI.children
     ]
     UI.elem Label [
-      UI.content (UI.lift1 (sprintf "Total: %.2f") total)
+      UI.content (Prop.map (sprintf "Total: %.2f") total)
     ]
   ]
 

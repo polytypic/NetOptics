@@ -5,24 +5,10 @@ open NetOptics
 open System.Windows
 open System.Windows.Controls
 open System.Windows.Controls.Primitives
-open System.Runtime.CompilerServices
 
 type UI<'T>
 
-type ExtAttribute = ExtensionAttribute
-
-type [<Ext; Sealed>] UI =
-  [<Ext>] static member AsProperty: IObs<'T> -> IObs<'T>
-
-  [<Ext>] static member IfElse: IObs<bool> * IObs<'T> * IObs<'T> -> IObs<'T>
-  [<Ext>] static member IfElse: IObs<bool> *       'T * IObs<'T> -> IObs<'T>
-  [<Ext>] static member IfElse: IObs<bool> * IObs<'T> *      'T  -> IObs<'T>
-  [<Ext>] static member IfElse: IObs<bool> *      'T  *      'T  -> IObs<'T>
-
-  static member lift1: ('S1 -> 'T) -> (#IObs<'S1> -> IObs<'T>)
-  static member lift2: ('S1 -> 'S2 -> 'T)
-                    -> (#IObs<'S1> -> #IObs<'S2> -> IObs<'T>)
-
+type [<Sealed>] UI =
   static member elem: constructor: (unit -> 'E)
                    -> (#IROL<'E -> unit> -> UI<UIElement>) when 'E :> UIElement
 
@@ -69,7 +55,7 @@ type [<Ext; Sealed>] UI =
 
   static member password: IAtom<string> -> (PasswordBox -> unit)
 
-  static member onEnter: ('E -> unit) -> ('E -> unit) when 'E :> UIElement
+  static member onEnter: (  'E -> unit) -> ('E -> unit) when 'E :> UIElement
 
   static member onLostFocus: ('E -> unit) -> ('E -> unit) when 'E :> UIElement
 

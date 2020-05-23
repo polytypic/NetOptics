@@ -4,7 +4,6 @@ open DeclarativeWPF
 open NetAtom
 open NetOptics
 open System
-open System.Reactive.Linq
 open System.Reactive.Subjects
 open System.Windows
 open System.Windows.Controls
@@ -18,11 +17,10 @@ module Credentials =
   let empty = {Username = ""; Password = ""}
 
 module Api =
-  let private pass = {Username = "simon"; Password = "letmein"}
-  let login credentials =
-    Observable.Return(())
-      .Delay(TimeSpan.FromSeconds 2.0)
-      .Select(fun _ -> credentials = pass)
+  let login =
+    Prop.value
+     >> Stream.delay (TimeSpan.FromSeconds 2.0)
+     >> Stream.map ((=) {Username = "simon"; Password = "letmein"})
 
 module Model =
   type t = {
@@ -38,27 +36,26 @@ module Model =
   let create (credentials: IAtom<_>) =
     let loginPressed = new Subject<unit>()
     let hasEmptyCredentials =
-      UI.lift1 (fun c -> c.Username = "" || c.Password = "") credentials
+      Prop.map (fun c -> c.Username = "" || c.Password = "") credentials
     let loginResult =
-      loginPressed
-        .SelectMany(fun _ -> credentials.Take(1))
-        .SelectMany(Api.login)
-    let loggedIn = loginResult.StartWith(false).AsProperty()
+      credentials
+       |> Stream.latestWhen loginPressed
+       |> Stream.switchMap Api.login
+    let loggedIn = loginResult |> Stream.startWith false |> Stream.toProp
     let loginInProgress =
-      Observable.Merge(
-        loginPressed.Select(fun _ -> true),
-        loginResult.Select(fun _ -> false)
-      ).StartWith(false).AsProperty()
-    let inputDisabled = UI.lift2 (||) loggedIn loginInProgress
-    let loginDisabled = UI.lift2 (||) hasEmptyCredentials inputDisabled
+      [ loginPressed |> Stream.map (fun _ -> true)
+        loginResult |> Stream.map (fun _ -> false) ]
+       |> Stream.merge |> Stream.startWith false |> Stream.toProp
+    let inputDisabled = Prop.map2 (||) loggedIn loginInProgress
+    let loginDisabled = Prop.map2 (||) hasEmptyCredentials inputDisabled
     {
       Credentials = credentials
       HasEmptyCredentials = hasEmptyCredentials
       LoginPressed = loginPressed
       LoggedIn = loggedIn
       LoginInProgress = loginInProgress
-      InputEnabled = UI.lift1 not inputDisabled
-      LoginEnabled = UI.lift1 not loginDisabled
+      InputEnabled = Prop.map not inputDisabled
+      LoginEnabled = Prop.map not loginDisabled
     }
 
 let loginView (model: Model.t) =
@@ -99,7 +96,9 @@ let main _ =
         UI.title "Login"
         UI.width 300.0
         UI.height 300.0
-        UI.content (model.LoggedIn.IfElse(loggedInView, loginView model))
+        model.LoggedIn
+         |> Prop.ifElse (Prop.value loggedInView) (Prop.value (loginView model))
+         |> UI.content
       ]
     )
   )

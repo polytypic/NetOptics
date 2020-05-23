@@ -134,7 +134,9 @@ val removeAsNoneL: t<'F, 'F, 'G, option<'G>>
 val noneAsRemoveL: t<'F, 'F, option<'G>, 'G>
 
 /// A prism that focuses on `Some` value of optional if any. Removable.
-val someP: t<option<'F>, 'F, 'G, option<'G>>
+val someP: t<option<'F>,   'F,   'G, option<'G>>
+/// A prism that focuses on `None` value of optional if any. Removable.
+val noneP: t<option<'F>, unit, unit, option<'F>>
 
 /// An isomorphism between options.
 val optionI: t<       'S ,        'F ,        'G ,        'T >
