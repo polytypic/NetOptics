@@ -97,9 +97,9 @@ val foldLens: aFold: (t<'S, 'E, 'G, 'T> -> ('S -> 'F))
            -> t<'S, 'F, 'G, 'T>
 
 /// Views through isomorphism in inverse direction. Raises on non-isos.
-val review: anIso: t<'S, 'F, 'G, 'T> -> 'G -> 'T
+val review: anIso: t<'S, 'F, 'G, 'T> -> ('G -> 'T)
 
-/// Inverts the given isomorphism.
+/// Inverts the given isomorphism. Raises on non-isos.
 val invertI: anIso: t<'S, 'F, 'G, 'T> -> t<'G, 'T, 'S, 'F>
 
 /// A prism with a focus only when it passes the given predicate.

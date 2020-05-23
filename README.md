@@ -37,8 +37,8 @@ For example, the `view` operation requires the given optic to have at least one
 focus on the target data structure. If there are no focuses, `view` will raise
 an exception. Likewise, the `invertI` combinator and the `review` operation
 require an (explicitly constructed) isomorphism or composition thereof. If the
-given optic is not an explicitly constructed isomorphism, full application of
-`invertI` or `review` will raise an exception.
+given optic is not an explicitly constructed isomorphism, `invertI` and `review`
+will raise an exception.
 
 **NOTE:** I have not explored a design that would use phantom types to track all
 the details required to avoid exceptions in the course of prototyping this

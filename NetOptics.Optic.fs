@@ -75,12 +75,13 @@ let view (o: t<_, 'F, _, _>): _ -> _ = viewWith o <| fun h r ->
 let tryView (o: t<_, 'F, _, _>): _ -> option<_> = viewWith o <| fun h r ->
   if h then unbox<'F> r |> Some else None
 
-let review (anIso: t<_, _, _, _>) y =
-  let (P (p, inverted)) = I true <|D(fun _ _ -> y)|>anIso
+let review (anIso: t<_, _, 'G, _>) =
+  let (P (p, inverted)) = I true <|D(fun c _ -> unbox<'G> c.View)|>anIso
   if not inverted then failwith "review"
-  let mutable c = Context ()
-  c.Over <- true
-  p.Invoke (&c, nil<_>)
+  fun (f: 'G) ->
+    let mutable c = Context (View = f)
+    c.Over <- true
+    p.Invoke (&c, nil<_>)
 
 let fold zero plus (o: t<_, _, _, _>) s =
   let mutable c = Context ()
