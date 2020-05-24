@@ -116,6 +116,9 @@ let [<EntryPoint>] main _ =
    <| Optic.review Optic.querystringI
         (Map.ofArray [|("message", [|"hello"; "world"|] :> IROL<_>)|])
    <| "?message=hello&message=world"
+  testEq
+   <| Optic.collect (Optic.subT 2 4 Optic.elemsT) [|3; 1; 4; 1; 5; 9; 2|]
+   <| upcast [|4; 1; 5; 9|]
   if failed <> 0
   then printfn "%d PASSED, %d FAILED" passed failed; 1
   else printfn "%d PASSED" passed; 0

@@ -205,6 +205,13 @@ val elemsT: t<#IROL<'F>, 'F, 'G, IROL<'G>>
 /// An isomorphism between lists.
 val elemsI: t<'S, 'F, 'G, 'T> -> t<#IROL<'S>, IROL<'F>, #IROL<'G>, IROL<'T>>
 
+val subT: offset: int -> count: int -> t<'S, 'F, 'F, 'T> -> t<'S, 'F, 'F, 'T>
+val dropT: count: int -> (t<'S, 'F, 'F, 'T> -> t<'S, 'F, 'F, 'T>)
+val takeT: count: int -> (t<'S, 'F, 'F, 'T> -> t<'S, 'F, 'F, 'T>)
+
+/// An indexed traversal.
+val indexedT: t<'S, 'F, 'G, 'T> -> t<'S, struct (int * 'F), 'G, 'T>
+
 /// An isomorphism that partitions a list into sublists of passes and fails.
 val partitionI: predicate: ('F -> bool)
           -> t<#IROL<'F>, IROL<'F> * IROL<'F>, #IROL<'G> * #IROL<'G>, IROL<'G>>

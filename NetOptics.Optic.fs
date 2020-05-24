@@ -214,6 +214,27 @@ let sndL: t<_, _, _, _> = fun p -> lens snd (fun y (x, _) -> (x, y)) p
 let inline private sub (xs: _[]) n =
   if n < xs.Length then Array.sub xs 0 n :> IROL<_> else xs :> IROL<_>
 
+let subT offset count (t: t<_, _, _, _>) =
+  let offset = max 0 offset
+  let count = max 0 count
+  let limit = uint32 offset + uint32 count
+  fun (P (p, _)) -> O<|D(fun c s ->
+    let mutable i = -1
+    let (P (p, _)) = O<|D(fun c x ->
+      inc &i
+      if offset <= i && uint32 i < limit then p.Invoke (&c, x) else x)|>t
+    p.Invoke (&c, s))
+
+let takeT count = subT 0 count
+let dropT count = subT count Int32.MaxValue
+
+let indexedT (t: t<_, _, _, _>) = fun (P (p, _)) -> O<|D(fun c s ->
+  let mutable i = -1
+  let (P (p, _)) = O<|D(fun c x ->
+    inc &i
+    p.Invoke (&c, struct (i, x)))|>t
+  p.Invoke (&c, s))
+
 let elemsT: t<#IROL<_>, _, _, _> = fun (P (p, _)) -> O<|D(fun c xs ->
   let n = xs.Count
   if c.Over then
