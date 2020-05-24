@@ -7,6 +7,10 @@ type Pipe<'S, 'T>
 
 /// Optics are functions composable with the standard `<<` operator.
 type t<'S, 'F, 'G, 'T> = Pipe<'F, 'G> -> Pipe<'S, 'T>
+/// Optics are functions composable with the standard `<<` operator.
+type t<'S, 'F> = t<'S, 'F, 'F, 'S>
+/// Optics are functions composable with the standard `<<` operator.
+type t<'S> = t<'S, 'S>
 
 /// Short alias for the `IReadOnlyList` type.
 type IROL<'T> = IReadOnlyList<'T>
@@ -103,7 +107,7 @@ val review: anIso: t<'S, 'F, 'G, 'T> -> ('G -> 'T)
 val invertI: anIso: t<'S, 'F, 'G, 'T> -> t<'G, 'T, 'S, 'F>
 
 /// A prism with a focus only when it passes the given predicate.
-val whereP: predicate: ('F -> bool) -> t<'F, 'F, 'F, 'F>
+val whereP: predicate: ('F -> bool) -> t<'F>
 
 /// A non-isomorphism computed from the focus.
 val choose: toOptic: ('S -> t<'S, 'F, 'G, 'T>) -> t<'S, 'F, 'G, 'T>
@@ -174,7 +178,7 @@ val sndsL: t<struct ('L * 'R1), 'R1, 'R2, struct ('L * 'R2)>
 val pairI: fstIso: t<'SL, 'FL, 'GL, 'TL>
         -> sndIso: t<'SR, 'FR, 'GR, 'TR>
         ->         t<'SL * 'SR, 'FL * 'FR, 'GL * 'GR, 'TL * 'TR>
-/// An isomorphism between pairs.
+/// An isomorphism between struct pairs.
 val pairsI: fstIso: t<'SL, 'FL, 'GL, 'TL>
          -> sndIso: t<'SR, 'FR, 'GR, 'TR>
          -> t<struct ('SL * 'SR),
@@ -186,12 +190,16 @@ val pairL: fstLens: t<'S, 'L1,       'L2,       'S>
         -> sndLens: t<'S,       'R1,       'R2, 'T>
         ->          t<'S, 'L1 * 'R1, 'L2 * 'R2, 'T>
 /// A lens focusing an a struct pair.  Given optics should be separable lenses.
-val pairsL: fstLens: t<'S,         'L1,                'L2,        'S>
-         -> sndLens: t<'S,               'R1,                'R2,  'T>
+val pairsL: fstLens: t<'S,         'L1       ,         'L2       , 'S>
+         -> sndLens: t<'S,               'R1 ,               'R2 , 'T>
          ->          t<'S, struct ('L1 * 'R1), struct ('L2 * 'R2), 'T>
+/// An isomorphism between struct pair and (class) pair.
+val cpairI: t<struct ('L1 * 'R1), 'L1 * 'R1, 'L2 * 'R2, struct ('L2 * 'R2)>
+/// An isomorphism between (class) pair and struct pair.
+val spairI: t<'L1 * 'R1, struct ('L1 * 'R1), struct ('L2 * 'R2), 'L2 * 'R2>
 
 /// An isomorphism between integers and floats.
-val truncateI: t<int, float, float, int>
+val truncateI: t<int, float>
 
 /// An isomorphism between arrays and read only lists.
 val arrayI: t<#IROL<'F>, 'F[], 'G[], IROL<'G>>
@@ -210,7 +218,7 @@ val findL: ('F -> bool) -> t<#IROL<'F>, option<'F>, 'F, IROL<'F>>
 val findP: ('F -> bool) -> t<#IROL<'F>, 'F, 'F, IROL<'F>>
 
 /// An isomorphism between given values and booleans.  Only truthy maps to true.
-val isOrI: falsy: 'F -> truthy: 'F -> t<'F, bool, bool, 'F> when 'F: equality
+val isOrI: falsy: 'F -> truthy: 'F -> t<'F, bool> when 'F: equality
 
 /// A lens like optic focusing on whether list contains given element.
 val containsL: 'F -> t<#IROL<'F>, bool, bool, IROL<'F>> when 'F: equality
@@ -270,22 +278,18 @@ val splitI: separator: string -> t<string, IROL<string>, #IROL<string>, string>
 val dropPrefixI: prefix: string -> t<string, option<string>, string, string>
 
 /// An isomorphism between strings with substrings replaced.
-val replaceI: inn: string -> out: string -> t<string, string, string, string>
+val replaceI: inn: string -> out: string -> t<string>
 
 /// An isomorphism between values and values that pass the predicate.
 val subsetI: predicate: ('S -> bool) -> t<'S, option<'S>, 'T, 'T>
 
 /// An isomorphism between strings with an optional separator and pairs.
-val uncoupleI: separator: string
-            -> t<string,
-                 struct (string * string),
-                 struct (string * string),
-                 string>
+val uncoupleI: separator: string -> t<string, struct (string * string)>
 
 /// An isomorphism between URL encoded and plain strings.
-val urlDecodeI: t<string, string, string, string>
+val urlDecodeI: t<string>
 /// An isomorphism between plain and URL encoded strings.
-val urlEncodeI: t<string, string, string, string>
+val urlEncodeI: t<string>
 
 /// An isomorphism between list of key-value pairs and map of keys to values.
 val toMultiMapI: t<#IROL<struct ('FK * 'FV)>,
@@ -301,7 +305,4 @@ val ofMultiMapI: t<Map<'FK, #IROL<'FV>>,
                  when 'FK: comparison and 'GK: comparison
 
 /// An isomorphism between querystrings and maps of keys to values.
-val querystringI: t<string,
-                    Map<string, IROL<string>>,
-                    Map<string, IROL<string>>,
-                    string>
+val querystringI: t<string, Map<string, IROL<string>>>

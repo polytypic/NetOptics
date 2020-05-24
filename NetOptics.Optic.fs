@@ -15,6 +15,8 @@ type D<'S, 'T> = delegate of byref<Context> * 'S -> 'T
 type Pipe<'S, 'T> = P of D<'S, 'T> * inverted: bool
 
 type t<'S, 'F, 'G, 'T> = Pipe<'F, 'G> -> Pipe<'S, 'T>
+type t<'S, 'F> = t<'S, 'F, 'F, 'S>
+type t<'S> = t<'S, 'S>
 
 type IROL<'T> = IReadOnlyList<'T>
 
@@ -330,14 +332,13 @@ let rolistI: t<_[], _, #IROL<_>, _[]> = fun p -> iso asList asArray p
 
 let inline private toTuple (struct (x, y)) = (x, y)
 let inline private ofTuple (x, y) = struct (x, y)
-let tupleI p = iso toTuple ofTuple p
-
-let inline private pair f1 f2 (v1, v2) = (f1 v1, f2 v2)
-let pairI i1 i2 = iso (pair (view i1) (view i2)) (pair (review i1) (review i2))
+let cpairI p = iso toTuple ofTuple p
+let spairI p = iso ofTuple toTuple p
 
 let inline private pairs f1 f2 (struct (v1, v2)) = struct (f1 v1, f2 v2)
 let pairsI i1 i2 =
   iso (pairs (view i1) (view i2)) (pairs (review i1) (review i2))
+let pairI i1 i2 = spairI << pairsI i1 i2 << cpairI
 
 let inline private rev xs = xs |> asArray |> Array.rev |> asList
 let revI: t<#IROL<_>, _, #IROL<_>, _> = fun p -> iso rev rev p
@@ -394,12 +395,10 @@ let andAlso (second: t<_, _, _, _>) (first: t<_, _, _, _>) (p: Pipe<_, _>) =
 
 let orElse (o2: t<_, _, _, _>) (o1: t<_, _, _, _>) = ifElse (canView o1) o1 o2
 
-let pairL o1 o2 =
-  lens <| fun s -> (view o1 s, view o2 s)
-       <| fun (v1, v2) s -> set o2 v2 (set o1 v1 s)
 let pairsL o1 o2 =
   lens <| fun s -> struct (view o1 s, view o2 s)
        <| fun struct (v1, v2) s -> set o2 v2 (set o1 v1 s)
+let pairL o1 o2 = pairsL o1 o2 << cpairI
 
 let indexedI: t<#IROL<_>, _, #IROL<struct (int * _)>, _> = fun p ->
   arrayI
