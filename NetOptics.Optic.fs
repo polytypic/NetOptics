@@ -50,7 +50,7 @@ let private setAt i y (xs: IROL<_>) =
 
 let inline private asList (xs: _[]) = xs :> IROL<_>
 
-let inline private append (l, r) =
+let inline private append (struct (l, r)) =
   if Array.length l = 0 then r
   elif Array.length r = 0 then l
   else Array.append l r
@@ -208,8 +208,15 @@ let beforeL action (P (p, _)) = O<|D(fun c s ->
   if not c.Over then action s
   p.Invoke (&c, s))
 
+let inline private fsts (struct (x, _)) = x
+let inline private snds (struct (_, y)) = y
+
 let fstL: t<_, _, _, _> = fun p -> lens fst (fun x (_, y) -> (x, y)) p
 let sndL: t<_, _, _, _> = fun p -> lens snd (fun y (x, _) -> (x, y)) p
+let fstsL: t<_, _, _, _> = fun p ->
+  lens fsts (fun x (struct (_, y)) -> struct (x, y)) p
+let sndsL: t<_, _, _, _> = fun p ->
+  lens snds (fun y (struct (x, _)) -> struct (x, y)) p
 
 let inline private sub (xs: _[]) n =
   if n < xs.Length then Array.sub xs 0 n :> IROL<_> else xs :> IROL<_>
@@ -321,8 +328,16 @@ let defaultI value = iso (toDefault value) (ofDefault value)
 let arrayI: t<#IROL<_>, _[], _[], _> = fun p -> iso asArray asList p
 let rolistI: t<_[], _, #IROL<_>, _[]> = fun p -> iso asList asArray p
 
+let inline private toTuple (struct (x, y)) = (x, y)
+let inline private ofTuple (x, y) = struct (x, y)
+let tupleI p = iso toTuple ofTuple p
+
 let inline private pair f1 f2 (v1, v2) = (f1 v1, f2 v2)
 let pairI i1 i2 = iso (pair (view i1) (view i2)) (pair (review i1) (review i2))
+
+let inline private pairs f1 f2 (struct (v1, v2)) = struct (f1 v1, f2 v2)
+let pairsI i1 i2 =
+  iso (pairs (view i1) (view i2)) (pairs (review i1) (review i2))
 
 let inline private rev xs = xs |> asArray |> Array.rev |> asList
 let revI: t<#IROL<_>, _, #IROL<_>, _> = fun p -> iso rev rev p
@@ -332,10 +347,12 @@ let splitI (sep: string) =
   iso (fun (s: string) -> s.Split(seps, StringSplitOptions.None) |> asList)
       (String.concat sep: #IROL<_> -> _)
 
-let partitionI predicate: t<#IROL<_>, _, #IROL<_> * #IROL<_>, _> =
-  arrayI << iso (Array.partition predicate) append << pairI rolistI rolistI
-let filterL predicate: t<_, _, _, _> = partitionI predicate << fstL
-let rejectL predicate: t<_, _, _, _> = partitionI predicate << sndL
+let partitionI predicate: t<#IROL<_>, _, struct (#IROL<_> * #IROL<_>), _> =
+  arrayI
+   << iso (Array.partition predicate >> ofTuple) append
+   << pairsI rolistI rolistI
+let filterL predicate: t<_, _, _, _> = partitionI predicate << fstsL
+let rejectL predicate: t<_, _, _, _> = partitionI predicate << sndsL
 
 let elemsI i: t<#IROL<_>, _, #IROL<_>, _> =
   arrayI << iso (Array.map (view i)) (Array.map (review i)) << rolistI
@@ -343,13 +360,15 @@ let elemsI i: t<#IROL<_>, _, #IROL<_>, _> =
 let inline private splitAtWith fn xs =
   let n = Array.length xs
   let i = fn n
-  if i = 0 then ([||], xs) elif i = n then (xs, [||]) else Array.splitAt i xs
+  if i = 0 then struct ([||], xs)
+  elif i = n then struct (xs, [||])
+  else Array.splitAt i xs |> ofTuple
 let inline private splitAt i =
   splitAtWith <| if i < 0 then max 0 << ((+) (i + 1)) else min i
-let splitAtI i: t<#IROL<_>, _, #IROL<_> * #IROL<_>, _> =
-  arrayI << iso (splitAt i) append << pairI rolistI rolistI
-let prependL: t<#IROL<_>, _, #IROL<_>, _> = fun p -> splitAtI 0 << fstL <| p
-let appendL: t<#IROL<_>, _, #IROL<_>, _> = fun p -> splitAtI -1 << sndL <| p
+let splitAtI i: t<#IROL<_>, _, struct (#IROL<_> * #IROL<_>), _> =
+  arrayI << iso (splitAt i) append << pairsI rolistI rolistI
+let prependL: t<#IROL<_>, _, #IROL<_>, _> = fun p -> splitAtI 0 << fstsL <| p
+let appendL: t<#IROL<_>, _, #IROL<_>, _> = fun p -> splitAtI -1 << sndsL <| p
 
 let findL predicate =
   choose <| fun xs ->
@@ -378,11 +397,14 @@ let orElse (o2: t<_, _, _, _>) (o1: t<_, _, _, _>) = ifElse (canView o1) o1 o2
 let pairL o1 o2 =
   lens <| fun s -> (view o1 s, view o2 s)
        <| fun (v1, v2) s -> set o2 v2 (set o1 v1 s)
+let pairsL o1 o2 =
+  lens <| fun s -> struct (view o1 s, view o2 s)
+       <| fun struct (v1, v2) s -> set o2 v2 (set o1 v1 s)
 
-let indexedI: t<#IROL<_>, _, #IROL<int * _>, _> = fun p ->
+let indexedI: t<#IROL<_>, _, #IROL<struct (int * _)>, _> = fun p ->
   arrayI
-   << iso (Array.mapi <| fun i x -> (i, x))
-          (Array.distinctBy fst >> Array.sortBy fst >> Array.map snd) // TODO: opt
+   << iso (Array.mapi <| fun i x -> struct (i, x))
+          (Array.distinctBy fsts >> Array.sortBy fsts >> Array.map snds) // TODO: opt
    << rolistI
    <| p
 
@@ -399,7 +421,8 @@ let private dropPrefix (prefix: string) (string: string) =
 
 let dropPrefixI (prefix: string) = iso <| dropPrefix prefix <| (+) prefix
 
-let private replace (inn: string) (out: string) (s: string) = s.Replace (inn, out)
+let private replace (inn: string) (out: string) (s: string) =
+  s.Replace (inn, out)
 let replaceI inn out = iso (replace inn out) (replace out inn)
 
 let subsetI predicate =
@@ -408,9 +431,9 @@ let subsetI predicate =
 let uncoupleI (sep: string) =
   iso <| fun (s: string) ->
            match s.IndexOf sep with
-           | -1 -> (s, "")
-           | i -> (s.Substring (0, i), s.Substring (i + sep.Length))
-      <| fun (l: string, r: string) ->
+           | -1 -> struct (s, "")
+           | i -> struct (s.Substring (0, i), s.Substring (i + sep.Length))
+      <| fun struct (l: string, r: string) ->
            if r = "" then l else (l + sep + r)
 
 let urlDecodeI = iso WebUtility.UrlDecode WebUtility.UrlEncode
@@ -418,13 +441,14 @@ let urlEncodeI = iso WebUtility.UrlEncode WebUtility.UrlDecode
 
 let private ofMultiMap m =
   Map.toArray m
-   |> Array.map (fun (k, vs) -> vs |> asArray |> Array.map (fun v -> (k, v)))
+   |> Array.map (fun (k, vs) ->
+        vs |> asArray |> Array.map (fun v -> struct (k, v)))
    |> Array.concat
    |> asList
 let private toMultiMap kvs =
   asArray kvs
-   |> Array.groupBy fst
-   |> Array.map (fun (k, kvs) -> (k, Array.map snd kvs |> asList))
+   |> Array.groupBy fsts
+   |> Array.map (fun (k, kvs) -> (k, Array.map snds kvs |> asList))
    |> Map.ofArray
 
 let toMultiMapI: t<#IROL<_>, _, _, _> = fun p -> iso toMultiMap ofMultiMap p
@@ -441,5 +465,5 @@ let querystringI =
   dropPrefixI "?" |> orI idI
    << replaceI "+" "%20"
    << splitI "&"
-   << elemsI (uncoupleI "=" << pairI urlDecodeI urlDecodeI)
+   << elemsI (uncoupleI "=" << pairsI urlDecodeI urlDecodeI)
    << toMultiMapI

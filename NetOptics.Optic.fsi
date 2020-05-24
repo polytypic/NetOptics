@@ -164,16 +164,31 @@ val normalizeI: ward: ('S -> 'F) -> t<'S, 'F, 'S, 'F>
 
 /// A lens focusing on the first element of a pair.
 val fstL: t<'L1 * 'R, 'L1, 'L2, 'L2 * 'R>
+/// A lens focusing on the first element of a struct pair.
+val fstsL: t<struct ('L1 * 'R), 'L1, 'L2, struct ('L2 * 'R)>
 /// A lens focusing on the second element of a pair.
 val sndL: t<'L * 'R1, 'R1, 'R2, 'L * 'R2>
+/// A lens focusing on the second element of a struct pair.
+val sndsL: t<struct ('L * 'R1), 'R1, 'R2, struct ('L * 'R2)>
 /// An isomorphism between pairs.
 val pairI: fstIso: t<'SL, 'FL, 'GL, 'TL>
         -> sndIso: t<'SR, 'FR, 'GR, 'TR>
         ->         t<'SL * 'SR, 'FL * 'FR, 'GL * 'GR, 'TL * 'TR>
+/// An isomorphism between pairs.
+val pairsI: fstIso: t<'SL, 'FL, 'GL, 'TL>
+         -> sndIso: t<'SR, 'FR, 'GR, 'TR>
+         -> t<struct ('SL * 'SR),
+              struct ('FL * 'FR),
+              struct ('GL * 'GR),
+              struct ('TL * 'TR)>
 /// A lens focusing an a pair.  Given optics should be separable lenses.
 val pairL: fstLens: t<'S, 'L1,       'L2,       'S>
         -> sndLens: t<'S,       'R1,       'R2, 'T>
         ->          t<'S, 'L1 * 'R1, 'L2 * 'R2, 'T>
+/// A lens focusing an a struct pair.  Given optics should be separable lenses.
+val pairsL: fstLens: t<'S,         'L1,                'L2,        'S>
+         -> sndLens: t<'S,               'R1,                'R2,  'T>
+         ->          t<'S, struct ('L1 * 'R1), struct ('L2 * 'R2), 'T>
 
 /// An isomorphism between integers and floats.
 val truncateI: t<int, float, float, int>
@@ -205,8 +220,11 @@ val elemsT: t<#IROL<'F>, 'F, 'G, IROL<'G>>
 /// An isomorphism between lists.
 val elemsI: t<'S, 'F, 'G, 'T> -> t<#IROL<'S>, IROL<'F>, #IROL<'G>, IROL<'T>>
 
+/// Traversal limited to specified subsequence of focuses.
 val subT: offset: int -> count: int -> t<'S, 'F, 'F, 'T> -> t<'S, 'F, 'F, 'T>
+/// Traversal limited to focuses remaining after specified count.
 val dropT: count: int -> (t<'S, 'F, 'F, 'T> -> t<'S, 'F, 'F, 'T>)
+/// Traversal limited to specified number of focuses.
 val takeT: count: int -> (t<'S, 'F, 'F, 'T> -> t<'S, 'F, 'F, 'T>)
 
 /// An indexed traversal.
@@ -214,7 +232,10 @@ val indexedT: t<'S, 'F, 'G, 'T> -> t<'S, struct (int * 'F), 'G, 'T>
 
 /// An isomorphism that partitions a list into sublists of passes and fails.
 val partitionI: predicate: ('F -> bool)
-          -> t<#IROL<'F>, IROL<'F> * IROL<'F>, #IROL<'G> * #IROL<'G>, IROL<'G>>
+          -> t<#IROL<'F>,
+               struct (IROL<'F> * IROL<'F>),
+               struct (#IROL<'G> * #IROL<'G>),
+               IROL<'G>>
 /// A lens that focuses on sublist of passes.
 val filterL: predicate: ('F -> bool)
           -> t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
@@ -224,7 +245,10 @@ val rejectL: predicate: ('F -> bool)
 
 /// An isomorphism that splits a list into two sublists at given position.
 val splitAtI: relative: int
-          -> t<#IROL<'F>, IROL<'F> * IROL<'F>, #IROL<'G> * #IROL<'G>, IROL<'G>>
+          -> t<#IROL<'F>,
+               struct (IROL<'F> * IROL<'F>),
+               struct (#IROL<'G> * #IROL<'G>),
+               IROL<'G>>
 /// A lens reads empty and prepends when written.
 val prependL: t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
 /// A lens that reads empty and appends when written.
@@ -233,8 +257,11 @@ val appendL: t<#IROL<'F>, IROL<'F>, #IROL<'F>, IROL<'F>>
 /// An isomorphism whose focus is reverse of the list.
 val revI: t<#IROL<'F>, IROL<'F>, #IROL<'G>, IROL<'G>>
 
-/// An isomorphism  between a list and an indexed list.
-val indexedI: t<#IROL<'F>, IROL<int * 'F>, #IROL<int * 'G>, IROL<'G>>
+/// An isomorphism between a list and an indexed list.
+val indexedI: t<#IROL<'F>,
+                IROL<struct (int * 'F)>,
+                #IROL<struct (int * 'G)>,
+                IROL<'G>>
 
 /// An isomorphism between string with separators and the separated strings.
 val splitI: separator: string -> t<string, IROL<string>, #IROL<string>, string>
@@ -250,7 +277,10 @@ val subsetI: predicate: ('S -> bool) -> t<'S, option<'S>, 'T, 'T>
 
 /// An isomorphism between strings with an optional separator and pairs.
 val uncoupleI: separator: string
-            -> t<string, string * string, string * string, string>
+            -> t<string,
+                 struct (string * string),
+                 struct (string * string),
+                 string>
 
 /// An isomorphism between URL encoded and plain strings.
 val urlDecodeI: t<string, string, string, string>
@@ -258,15 +288,17 @@ val urlDecodeI: t<string, string, string, string>
 val urlEncodeI: t<string, string, string, string>
 
 /// An isomorphism between list of key-value pairs and map of keys to values.
-val toMultiMapI: t<#IROL<'FK * 'FV>,
+val toMultiMapI: t<#IROL<struct ('FK * 'FV)>,
                    Map<'FK, IROL<'FV>>,
                    Map<'GK, #IROL<'GV>>,
-                   IROL<'GK * 'GV>> when 'FK: comparison and 'GK: comparison
+                   IROL<struct ('GK * 'GV)>>
+                 when 'FK: comparison and 'GK: comparison
 /// An isomorphism between map of keys to values and list of key-value pairs.
 val ofMultiMapI: t<Map<'FK, #IROL<'FV>>,
-                   IROL<'FK * 'FV>,
-                   #IROL<'GK * 'GV>,
-                   Map<'GK, IROL<'GV>>> when 'FK: comparison and 'GK: comparison
+                   IROL<struct ('FK * 'FV)>,
+                   #IROL<struct ('GK * 'GV)>,
+                   Map<'GK, IROL<'GV>>>
+                 when 'FK: comparison and 'GK: comparison
 
 /// An isomorphism between querystrings and maps of keys to values.
 val querystringI: t<string,
